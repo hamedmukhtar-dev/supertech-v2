@@ -1,7 +1,7 @@
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, datetime
 from typing import Dict, Any, List
 
 import pandas as pd
@@ -78,13 +78,111 @@ def init_db():
             """
         )
 
+        # جدول الأنشطة/التجارب (كتالوج ترفيهي)
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS activities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                city TEXT NOT NULL,
+                name TEXT NOT NULL,
+                category TEXT,
+                description TEXT,
+                approx_price_usd REAL,
+                provider TEXT,
+                booking_link TEXT
+            );
+            """
+        )
+
+        # جدول خطط الرحلات المحفوظة (Itineraries)
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS itineraries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                traveller_name TEXT,
+                traveller_email TEXT,
+                traveller_phone TEXT,
+                from_city TEXT,
+                destination_city TEXT,
+                destination_country TEXT,
+                days INTEGER,
+                budget REAL,
+                month TEXT,
+                interests TEXT,
+                plan_text TEXT
+            );
+            """
+        )
+
         conn.commit()
+
+        # تعبئة أولية لجدول الأنشطة (إن كان فاضي)
+        cur.execute("SELECT COUNT(*) FROM activities;")
+        count = cur.fetchone()[0]
+        if count == 0:
+            seed_activities = [
+                (
+                    "Riyadh",
+                    "Boulevard City Experience",
+                    "Entertainment",
+                    "زيارة منطقة بوليفارد الرياض مع تجارب مطاعم، فعاليات، وعروض.",
+                    120.0,
+                    "Local Operator",
+                    "https://example.com/boulevard"
+                ),
+                (
+                    "Makkah",
+                    "Umrah Guidance & City Tour",
+                    "Religious",
+                    "برنامج عمرة مع جولة تعريفية في مكة المكرمة.",
+                    200.0,
+                    "Umrah Partner",
+                    "https://example.com/umrah"
+                ),
+                (
+                    "Jeddah",
+                    "Jeddah Waterfront Evening",
+                    "Leisure",
+                    "مساء على الكورنيش مع مطاعم بحرية وجلسات هادئة.",
+                    80.0,
+                    "Local Guide",
+                    "https://example.com/jeddah-waterfront"
+                ),
+                (
+                    "AlUla",
+                    "AlUla Heritage & Nature Tour",
+                    "Nature",
+                    "جولة في العلا تشمل المواقع الأثرية وتجارب الطبيعة.",
+                    350.0,
+                    "AlUla Partner",
+                    "https://example.com/alula"
+                ),
+                (
+                    "NEOM Region",
+                    "Future of NEOM Discovery",
+                    "Futuristic",
+                    "عرض تعريفي عن مشاريع نيوم مع جولة في المناطق المفتوحة حالياً.",
+                    400.0,
+                    "NEOM Experience",
+                    "https://example.com/neom"
+                ),
+            ]
+            cur.executemany(
+                """
+                INSERT INTO activities
+                (city, name, category, description, approx_price_usd, provider, booking_link)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                seed_activities,
+            )
+            conn.commit()
 
 
 init_db()
 
 # ==============================
-# 3) CRUD للفنادق والعقود
+# 3) CRUD للفنادق والعقود والأنشطة وخطط الرحلات
 # ==============================
 
 def add_hotel(
@@ -173,6 +271,115 @@ def list_contracts() -> pd.DataFrame:
     return df
 
 
+def list_activities(city_filter: str | None = None, category_filter: str | None = None) -> pd.DataFrame:
+    base_query = "SELECT * FROM activities"
+    params = []
+    conditions = []
+
+    if city_filter and city_filter != "الكل":
+        conditions.append("city = ?")
+        params.append(city_filter)
+
+    if category_filter and category_filter != "الكل":
+        conditions.append("category = ?")
+        params.append(category_filter)
+
+    if conditions:
+        base_query += " WHERE " + " AND ".join(conditions)
+
+    base_query += " ORDER BY city, category, name"
+
+    with get_conn() as conn:
+        df = pd.read_sql_query(base_query, conn, params=params)
+    return df
+
+
+def save_itinerary(
+    traveller_name: str,
+    traveller_email: str,
+    traveller_phone: str,
+    form_data: Dict[str, Any],
+    plan_text: str,
+) -> None:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO itineraries
+            (
+                created_at,
+                traveller_name,
+                traveller_email,
+                traveller_phone,
+                from_city,
+                destination_city,
+                destination_country,
+                days,
+                budget,
+                month,
+                interests,
+                plan_text
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.utcnow().isoformat(),
+                traveller_name,
+                traveller_email,
+                traveller_phone,
+                form_data["from_city"],
+                form_data["destination_city"],
+                form_data["destination_country"],
+                int(form_data["days"]),
+                float(form_data["budget"]),
+                form_data["month"],
+                ", ".join(form_data["interests"]) if form_data["interests"] else "",
+                plan_text,
+            ),
+        )
+        conn.commit()
+
+
+def list_itineraries() -> pd.DataFrame:
+    with get_conn() as conn:
+        df = pd.read_sql_query(
+            """
+            SELECT
+                id,
+                created_at,
+                traveller_name,
+                traveller_email,
+                traveller_phone,
+                from_city,
+                destination_city,
+                destination_country,
+                days,
+                budget,
+                month,
+                interests
+            FROM itineraries
+            ORDER BY datetime(created_at) DESC
+            """,
+            conn,
+        )
+    return df
+
+
+def get_itinerary(itinerary_id: int) -> Dict[str, Any] | None:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT * FROM itineraries WHERE id = ?",
+            (itinerary_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+
+        columns = [desc[0] for desc in cur.description]
+        return dict(zip(columns, row))
+
+
 # ==============================
 # 4) تكامل بسيط مع OpenAI (الموديل قابل للتبديل لاحقاً مع HUMAIN)
 # ==============================
@@ -192,7 +399,7 @@ def _call_ai(instructions: str, user_input: str) -> str:
     if not client or not OPENAI_API_KEY:
         return (
             "⚠️ التكامل مع OpenAI غير مفعّل بعد.\n"
-            "رجاءً أضف مفتاح OPENAI_API_KEY في ملف .env على السيرفر أو الجهاز المحلي."
+            "رجاءً أضف مفتاح OPENAI_API_KEY في إعدادات السيرفر أو منصة النشر."
         )
     try:
         resp = client.responses.create(
@@ -264,6 +471,7 @@ def page_home():
 
 - تخطيط رحلات إلى السعودية (وخارجها لاحقاً) حسب **الميزانية والاهتمامات**.
 - إدارة عقود الفنادق والتكامل مع مزودي الخدمات (API Ready).
+- كتالوج أنشطة وتجارب داخل مدن مختلفة في السعودية.
 - دمج الذكاء الاصطناعي (اليوم عبر OpenAI، وغداً عبر HUMAIN ONE و ALLAM).
 
 هذه النسخة مهيّأة لتكون **عرض توضيحي (Demo)** يمكن مشاركته مع:
@@ -285,6 +493,8 @@ def page_home():
     st.markdown("### جرّب الآن 👇")
     st.markdown(
         "- من القائمة الجانبية اختر **🧭 Trip Planner (B2C)** لتجربة تخطيط رحلة.\n"
+        "- أو ادخل إلى **🎟️ Experiences & Activities** لاستعراض الأنشطة.\n"
+        "- أو جرّب **📝 Saved Itineraries** لرؤية خطط الرحلات المحفوظة.\n"
         "- أو ادخل إلى **🏨 Hotels & Contracts (Admin)** لاستكشاف إدارة الفنادق.\n"
         "- أو افتح **🤖 AI Assistant** للتحاور مع المساعد الذكي."
     )
@@ -336,6 +546,17 @@ def page_trip_planner():
             ["عمرة", "سياحة دينية", "تسوق", "فعاليات ترفيهية", "مباريات كرة", "طبيعة وهدوء", "مطاعم وتجارب طعام"],
         )
 
+        st.markdown("---")
+        st.markdown("### حفظ هذه الخطة في النظام (اختياري)")
+
+        col3, col4 = st.columns(2)
+        with col3:
+            traveller_name = st.text_input("اسم المسافر (اختياري)")
+            traveller_email = st.text_input("البريد الإلكتروني (اختياري)")
+        with col4:
+            traveller_phone = st.text_input("رقم الهاتف (اختياري)")
+            save_plan_flag = st.checkbox("🔐 احفظ هذه الخطة في النظام بعد توليدها")
+
         submitted = st.form_submit_button("✨ اقترح لي خطة رحلة")
 
     if submitted:
@@ -355,11 +576,111 @@ def page_trip_planner():
         st.markdown("### ✈️ الخطة المقترحة:")
         st.write(plan_text)
 
+        if save_plan_flag and plan_text and not plan_text.startswith("⚠️"):
+            save_itinerary(
+                traveller_name=traveller_name.strip(),
+                traveller_email=traveller_email.strip(),
+                traveller_phone=traveller_phone.strip(),
+                form_data=form_data,
+                plan_text=plan_text,
+            )
+            st.success("✅ تم حفظ هذه الخطة في قسم Saved Itineraries.")
+        elif save_plan_flag and plan_text.startswith("⚠️"):
+            st.warning("لم يتم الحفظ لأن التكامل مع الذكاء الاصطناعي غير مفعّل حالياً.")
+
         st.markdown("---")
         st.caption(
             "هذه خطة تجريبية (Demo) مبنية على الذكاء الاصطناعي فقط، "
             "وليست مرتبطة بعد بأنظمة حجز حقيقية."
         )
+
+
+def page_activities():
+    st.title("🎟️ Experiences & Activities — الأنشطة والتجارب")
+
+    st.write(
+        "كتالوج تجريبي لأنشطة وتجارب داخل مدن مختلفة في السعودية. "
+        "يمكن لاحقاً ربط هذه الأنشطة بمنصات حجز حقيقية (Tickets, Events, Tours APIs)."
+    )
+
+    with get_conn() as conn:
+        df_all = pd.read_sql_query("SELECT DISTINCT city FROM activities ORDER BY city;", conn)
+        df_cat = pd.read_sql_query("SELECT DISTINCT category FROM activities ORDER BY category;", conn)
+
+    cities = ["الكل"] + df_all["city"].tolist()
+    categories = ["الكل"] + df_cat["category"].dropna().tolist()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        city_filter = st.selectbox("اختر المدينة", cities)
+    with col2:
+        category_filter = st.selectbox("اختر نوع النشاط", categories)
+
+    df = list_activities(city_filter, category_filter)
+
+    if df.empty:
+        st.info("لا توجد أنشطة مطابقة للفلتر الحالي.")
+        return
+
+    st.markdown("---")
+    st.subheader("الأنشطة المتاحة")
+
+    for _, row in df.iterrows():
+        with st.expander(f"{row['name']} — {row['city']} ({row['category']})"):
+            st.write(row["description"])
+            col1, col2, col3 = st.columns([2, 1, 1])
+            with col1:
+                st.write(f"💰 السعر التقريبي: **{row['approx_price_usd']:.0f} دولار**" if row["approx_price_usd"] else "💰 السعر: غير محدد")
+            with col2:
+                st.write(f"🤝 المزوّد: {row['provider']}" if row["provider"] else "")
+            with col3:
+                if row["booking_link"]:
+                    st.link_button("رابط حجز (تجريبي)", row["booking_link"])
+
+
+def page_itineraries():
+    st.title("📝 Saved Itineraries — خطط الرحلات المحفوظة")
+
+    df = list_itineraries()
+    if df.empty:
+        st.info("لا توجد خطط رحلات محفوظة حتى الآن. جرّب إنشاء خطة من صفحة Trip Planner.")
+        return
+
+    st.subheader("قائمة الخطط")
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+    itinerary_ids = df["id"].tolist()
+    labels = [f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} ({row['from_city']} → {row['destination_city']})" for _, row in df.iterrows()]
+
+    selected_label = st.selectbox("اختر خطة لعرض التفاصيل", labels)
+    if selected_label:
+        # استخراج ID من النص
+        try:
+            selected_id = int(selected_label.split("—")[0].replace("#", "").strip())
+        except Exception:
+            selected_id = None
+
+        if selected_id:
+            details = get_itinerary(selected_id)
+            if not details:
+                st.error("تعذر تحميل تفاصيل هذه الخطة.")
+                return
+
+            st.markdown("### تفاصيل الخطة")
+            st.write(f"👤 المسافر: {details.get('traveller_name') or 'غير محدد'}")
+            st.write(f"📧 البريد: {details.get('traveller_email') or 'غير محدد'}")
+            st.write(f"📱 الهاتف: {details.get('traveller_phone') or 'غير محدد'}")
+            st.write(
+                f"✈️ المسار: {details.get('from_city')} → {details.get('destination_city')}, {details.get('destination_country')}"
+            )
+            st.write(f"🗓️ الأيام: {details.get('days')} | 💰 الميزانية: {details.get('budget')} USD")
+            st.write(f"🕒 أنشئت في: {details.get('created_at')}")
+            st.write(f"🎯 الاهتمامات: {details.get('interests') or 'غير محددة'}")
+
+            st.markdown("---")
+            st.markdown("### نص الخطة الكاملة:")
+            st.write(details.get("plan_text") or "")
 
 
 def page_hotels_admin():
@@ -531,6 +852,8 @@ page = st.sidebar.radio(
     [
         "🏠 Home",
         "🧭 Trip Planner (B2C)",
+        "🎟️ Experiences & Activities",
+        "📝 Saved Itineraries",
         "🏨 Hotels & Contracts (Admin)",
         "🤖 AI Assistant",
     ],
@@ -540,6 +863,10 @@ if page.startswith("🏠"):
     page_home()
 elif page.startswith("🧭"):
     page_trip_planner()
+elif page.startswith("🎟️"):
+    page_activities()
+elif page.startswith("📝"):
+    page_itineraries()
 elif page.startswith("🏨"):
     page_hotels_admin()
 elif page.startswith("🤖"):
