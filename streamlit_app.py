@@ -23,7 +23,7 @@ load_dotenv()  # قراءة OPENAI_API_KEY من .env (لو موجود)
 APP_TITLE = "HUMAIN Lifestyle — Travel & Entertainment Super Platform"
 
 # ==============================
-# 2) إعداد قاعدة البيانات (SQLite بسيطة)
+# 2) إعداد قاعدة البيانات (SQLite)
 # ==============================
 
 DB_PATH = "humain_lifestyle.db"
@@ -42,7 +42,7 @@ def init_db():
     with get_conn() as conn:
         cur = conn.cursor()
 
-        # جدول الفنادق (للاستخدام الإداري حالياً)
+        # الفنادق
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS hotels (
@@ -59,7 +59,7 @@ def init_db():
             """
         )
 
-        # جدول العقود البسيط
+        # العقود
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS contracts (
@@ -78,7 +78,7 @@ def init_db():
             """
         )
 
-        # جدول الأنشطة/التجارب (كتالوج ترفيهي)
+        # الأنشطة/التجارب
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS activities (
@@ -94,7 +94,7 @@ def init_db():
             """
         )
 
-        # جدول خطط الرحلات المحفوظة (Itineraries)
+        # خطط الرحلات
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS itineraries (
@@ -115,7 +115,7 @@ def init_db():
             """
         )
 
-        # جدول البرامج / الباكجات
+        # البرامج / Packages
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS packages (
@@ -139,7 +139,7 @@ def init_db():
             """
         )
 
-        # جدول طلبات الحجز (Leads / Booking Requests)
+        # طلبات الحجز / Leads
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS booking_requests (
@@ -165,14 +165,12 @@ def init_db():
 
         conn.commit()
 
-        # تعبئة أولية لجدول الأنشطة (إن كان فاضي)
+        # تعبئة أولية للأنشطة لو الجدول فاضي
         cur.execute("SELECT COUNT(*) FROM activities;")
         count = cur.fetchone()[0]
         if count == 0:
             seed_activities = [
-                # ======================
                 # Riyadh
-                # ======================
                 (
                     "Riyadh",
                     "Boulevard City Evening",
@@ -219,9 +217,7 @@ def init_db():
                     "https://example.com/riyadh-citywalk",
                 ),
 
-                # ======================
                 # Jeddah
-                # ======================
                 (
                     "Jeddah",
                     "Jeddah Waterfront Evening Walk",
@@ -250,9 +246,7 @@ def init_db():
                     "https://example.com/jeddah-albalad",
                 ),
 
-                # ======================
                 # Makkah
-                # ======================
                 (
                     "Makkah",
                     "Umrah Program & City Tour",
@@ -272,9 +266,7 @@ def init_db():
                     "https://example.com/makkah-historical",
                 ),
 
-                # ======================
                 # Madina
-                # ======================
                 (
                     "Madina",
                     "Ziyarah of Madina Landmarks",
@@ -294,9 +286,7 @@ def init_db():
                     "https://example.com/madina-markets",
                 ),
 
-                # ======================
                 # Dammam & Al Khobar
-                # ======================
                 (
                     "Dammam",
                     "Dammam Corniche & Park",
@@ -325,9 +315,7 @@ def init_db():
                     "https://example.com/khobar-family-center",
                 ),
 
-                # ======================
                 # Abha
-                # ======================
                 (
                     "Abha",
                     "Abha Mountains & Cable Car",
@@ -347,9 +335,7 @@ def init_db():
                     "https://example.com/abha-rijal-almaa",
                 ),
 
-                # ======================
                 # Taif
-                # ======================
                 (
                     "Taif",
                     "Taif Rose Farms Visit",
@@ -369,9 +355,7 @@ def init_db():
                     "https://example.com/taif-cablecar",
                 ),
 
-                # ======================
                 # AlUla
-                # ======================
                 (
                     "AlUla",
                     "AlUla Heritage & Nature Tour",
@@ -391,9 +375,7 @@ def init_db():
                     "https://example.com/alula-stargazing",
                 ),
 
-                # ======================
                 # Tabuk
-                # ======================
                 (
                     "Tabuk",
                     "Tabuk Desert & Historical Tour",
@@ -404,9 +386,7 @@ def init_db():
                     "https://example.com/tabuk-desert",
                 ),
 
-                # ======================
-                # NEOM Region
-                # ======================
+                # NEOM
                 (
                     "NEOM Region",
                     "NEOM Future Discovery Tour (Concept)",
@@ -417,9 +397,7 @@ def init_db():
                     "https://example.com/neom-discovery",
                 ),
 
-                # ======================
                 # Diriyah
-                # ======================
                 (
                     "Diriyah",
                     "Diriyah Heritage District Walk",
@@ -444,7 +422,7 @@ def init_db():
 init_db()
 
 # ==============================
-# 3) CRUD للفنادق والعقود والأنشطة وخطط الرحلات والبرامج والطلبات
+# 3) دوال CRUD
 # ==============================
 
 def add_hotel(
@@ -640,14 +618,10 @@ def list_itineraries() -> pd.DataFrame:
 def get_itinerary(itinerary_id: int) -> Optional[Dict[str, Any]]:
     with get_conn() as conn:
         cur = conn.cursor()
-        cur.execute(
-            "SELECT * FROM itineraries WHERE id = ?",
-            (itinerary_id,),
-        )
+        cur.execute("SELECT * FROM itineraries WHERE id = ?", (itinerary_id,))
         row = cur.fetchone()
         if not row:
             return None
-
         columns = [desc[0] for desc in cur.description]
         return dict(zip(columns, row))
 
@@ -822,9 +796,8 @@ def list_booking_requests() -> pd.DataFrame:
         )
     return df
 
-
 # ==============================
-# 4) تكامل بسيط مع OpenAI (الموديل قابل للتبديل لاحقاً مع HUMAIN)
+# 4) تكامل OpenAI
 # ==============================
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -838,7 +811,6 @@ except Exception:
 
 
 def _call_ai(instructions: str, user_input: str) -> str:
-    """استدعاء موحّد لـ OpenAI (لاحقاً نستبدل بـ HUMAIN بسهولة)."""
     if not client or not OPENAI_API_KEY:
         return (
             "⚠️ التكامل مع OpenAI غير مفعّل بعد.\n"
@@ -883,8 +855,7 @@ def ai_travel_plan(form_data: Dict[str, Any]) -> str:
 def ai_contract_helper(prompt: str) -> str:
     instructions = (
         "أنت مساعد قانوني/تجاري مختص في عقود توزيع وحجوزات الفنادق. "
-        "اكتب بنود عقود أو سياسات إلغاء أو شروط دفع بصياغة عربية احترافية، مختصرة وواضحة. "
-        "إن أمكن، قسّم النص إلى فقرات أو نقاط."
+        "اكتب بنود عقود أو سياسات إلغاء أو شروط دفع بصياغة عربية احترافية، مختصرة وواضحة."
     )
     return _call_ai(instructions, prompt)
 
@@ -895,7 +866,6 @@ def ai_general_chat(prompt: str) -> str:
         "الترفيه، والحجوزات، وتشرح الفكرة العامة للمنصة لو احتاج."
     )
     return _call_ai(instructions, prompt)
-
 
 # ==============================
 # 5) واجهات الصفحات
@@ -917,11 +887,6 @@ def page_home():
 - كتالوج أنشطة وتجارب داخل مدن مختلفة في السعودية.
 - بناء برامج (Packages) جاهزة للبيع مع إدارة طلبات الحجز (Leads).
 - دمج الذكاء الاصطناعي (اليوم عبر OpenAI، وغداً عبر HUMAIN ONE و ALLAM).
-
-هذه النسخة مهيّأة لتكون **عرض توضيحي (Demo)** يمكن مشاركته مع:
-- المستثمرين
-- HUMAIN
-- الشركاء في قطاع السياحة والترفيه.
 """
         )
 
@@ -929,20 +894,20 @@ def page_home():
         st.info(
             "**وضع العرض (Demo Mode)**\n\n"
             "- لا توجد بعد تكاملات حقيقية مع خطوط طيران أو منصات ترفيه.\n"
-            "- كل شيء معدّ ليعرض *كيف ستكون تجربة المنصة* للمستخدم النهائي.\n"
-            "- يمكن تطوير التكاملات لاحقاً (Flights, Hotels, Events APIs)."
+            "- الهدف هو عرض تجربة نهائية للمستخدم والمستثمر.\n"
+            "- يمكن ربط هذه المنصة بمصادر حجز حقيقية لاحقاً."
         )
 
     st.markdown("---")
     st.markdown("### جرّب الآن 👇")
     st.markdown(
-        "- من القائمة الجانبية اختر **🧭 Trip Planner (B2C)** لتجربة تخطيط رحلة.\n"
-        "- أو ادخل إلى **🎟️ Experiences & Activities** لاستعراض الأنشطة.\n"
-        "- أو جرّب **📝 Saved Itineraries** لرؤية خطط الرحلات المحفوظة.\n"
-        "- أو ادخل إلى **📦 Packages / Programs** لبناء برامج جاهزة للبيع.\n"
-        "- أو ادخل إلى **📥 Booking Requests (Admin)** لمراجعة طلبات الحجز.\n"
-        "- أو ادخل إلى **🏨 Hotels & Contracts (Admin)** لاستكشاف إدارة الفنادق.\n"
-        "- أو افتح **🤖 AI Assistant** للتحاور مع المساعد الذكي."
+        "- **🧭 Trip Planner (B2C)** لتجربة تخطيط رحلة.\n"
+        "- **🎟️ Experiences & Activities** لاستعراض الأنشطة.\n"
+        "- **📝 Saved Itineraries** لرؤية خطط الرحلات المحفوظة.\n"
+        "- **📦 Packages / Programs** لبناء برامج جاهزة للبيع.\n"
+        "- **📥 Booking Requests (Admin)** لمراجعة طلبات الحجز.\n"
+        "- **🏨 Hotels & Contracts (Admin)** لإدارة الفنادق والعقود.\n"
+        "- **🤖 AI Assistant** للتحاور مع المساعد الذكي."
     )
 
 
@@ -1151,13 +1116,12 @@ def page_packages():
     st.title("📦 Packages / Programs — برامج جاهزة للبيع")
 
     st.write(
-        "في هذه الصفحة يمكنك تحويل خطط الرحلات المحفوظة إلى برامج (Packages) "
-        "محددة بمدينة، فندق، أنشطة، وسعر تقريبي."
+        "حوّل خطط الرحلات المحفوظة إلى برامج (Packages) تحتوي على: مدينة، فندق، أنشطة، وسعر تقريبي."
     )
 
     tab_create, tab_list = st.tabs(["إنشاء برنامج جديد", "قائمة البرامج"])
 
-    # --- إنشاء برنامج جديد ---
+    # إنشاء برنامج جديد
     with tab_create:
         itineraries_df = list_itineraries()
         if itineraries_df.empty:
@@ -1168,7 +1132,10 @@ def page_packages():
             labels = []
             id_mapping: Dict[str, int] = {}
             for _, row in itineraries_df.iterrows():
-                label = f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} ({row['from_city']} → {row['destination_city']}, {row['days']} أيام)"
+                label = (
+                    f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} "
+                    f"({row['from_city']} → {row['destination_city']}, {row['days']} أيام)"
+                )
                 labels.append(label)
                 id_mapping[label] = int(row["id"])
 
@@ -1188,10 +1155,9 @@ def page_packages():
             hotel_options: Dict[str, Optional[int]] = {"بدون فندق محدد": None}
             if not hotels_df.empty:
                 for _, row in hotels_df.iterrows():
-                    label = f"{row['name']} ({row['city'] or ''})"
-                    hotel_options[label] = int(row["id"])
+                    label_h = f"{row['name']} ({row['city'] or ''})"
+                    hotel_options[label_h] = int(row["id"])
 
-            # الأنشطة في نفس المدينة
             activities_df = list_activities(city_filter=default_city, category_filter=None)
             activity_labels: List[str] = []
             activity_map: Dict[str, int] = {}
@@ -1207,9 +1173,15 @@ def page_packages():
                 with col1:
                     pkg_days = st.number_input("عدد الأيام", min_value=1, max_value=60, value=default_days)
                 with col2:
-                    pkg_budget = st.number_input("الميزانية التقديرية (من الواقع)", min_value=100.0, max_value=50000.0, value=default_budget, step=100.0)
+                    pkg_budget = st.number_input(
+                        "الميزانية التقديرية (من الواقع)", min_value=100.0, max_value=50000.0,
+                        value=default_budget, step=100.0
+                    )
                 with col3:
-                    pkg_price_from = st.number_input("سعر البيع (ابتداءً من)", min_value=100.0, max_value=100000.0, value=default_budget, step=100.0)
+                    pkg_price_from = st.number_input(
+                        "سعر البيع (ابتداءً من)", min_value=100.0, max_value=100000.0,
+                        value=default_budget, step=100.0
+                    )
 
                 target_segment = st.selectbox(
                     "الفئة المستهدفة",
@@ -1222,20 +1194,20 @@ def page_packages():
                 )
                 base_hotel_id = hotel_options[base_hotel_label]
 
-                st.markdown("#### الأنشطة المقترحة داخل البرنامج")
+                st.markdown("#### الأنشطة داخل البرنامج")
                 if activities_df.empty:
-                    st.info("لا توجد أنشطة مسجلة لهذه المدينة بعد. يمكن إضافتها لاحقاً من قسم Activities.")
+                    st.info("لا توجد أنشطة مسجلة لهذه المدينة بعد.")
                     selected_activities_labels: List[str] = []
                 else:
                     selected_activities_labels = st.multiselect(
-                        "اختر الأنشطة التي تدخل ضمن هذا البرنامج",
+                        "اختر الأنشطة",
                         activity_labels,
                     )
 
                 pkg_status = st.selectbox("حالة البرنامج", ["Draft", "Active"])
                 pkg_notes = st.text_area("ملاحظات إضافية (اختياري)")
 
-                st.markdown("#### خطة الرحلة المرتبطة بالبرنامج (للإطلاع)")
+                st.markdown("#### خطة الرحلة المرتبطة (للمراجعة)")
                 st.code(default_plan_text or "لا توجد خطة محفوظة.", language="markdown")
 
                 submitted_pkg = st.form_submit_button("💾 حفظ البرنامج")
@@ -1262,7 +1234,7 @@ def page_packages():
                     st.success("✅ تم إنشاء البرنامج وحفظه في النظام.")
                     st.experimental_rerun()
 
-    # --- عرض قائمة البرامج ---
+    # قائمة البرامج
     with tab_list:
         st.subheader("قائمة البرامج المتاحة")
 
@@ -1305,7 +1277,7 @@ def page_packages():
                 st.write(details["notes"])
 
             st.markdown("---")
-            # عرض الأنشطة المرتبطة
+            # الأنشطة المرتبطة
             activities_ids_str = details.get("activities_ids") or ""
             ids_list: List[int] = []
             if activities_ids_str.strip():
@@ -1319,7 +1291,10 @@ def page_packages():
                 df_acts = get_activities_by_ids(ids_list)
                 if not df_acts.empty:
                     for _, row in df_acts.iterrows():
-                        st.write(f"- {row['name']} — {row['city']} ({row['category']}) — تقريباً {row['approx_price_usd']} USD")
+                        st.write(
+                            f"- {row['name']} — {row['city']} ({row['category']}) "
+                            f"— تقريباً {row['approx_price_usd']} USD"
+                        )
                 else:
                     st.info("لا يمكن تحميل تفاصيل الأنشطة المرتبطة.")
             else:
@@ -1334,13 +1309,12 @@ def page_booking_requests():
     st.title("📥 Booking Requests (Admin) — طلبات الحجز")
 
     st.write(
-        "في هذه الصفحة يمكنك تسجيل ومراجعة طلبات الحجز (Leads) "
-        "المرتبطة بالبرامج أو بخطط الرحلات."
+        "هنا يمكنك تسجيل ومراجعة طلبات الحجز (Leads) المرتبطة بالبرامج أو بخطط الرحلات."
     )
 
     tab_new, tab_list = st.tabs(["طلب جديد", "قائمة الطلبات"])
 
-    # --- طلب جديد ---
+    # طلب جديد
     with tab_new:
         st.subheader("تسجيل طلب حجز جديد")
 
@@ -1356,7 +1330,10 @@ def page_booking_requests():
         itin_options: Dict[str, Optional[int]] = {"بدون ربط بخطة محددة": None}
         if not itineraries_df.empty:
             for _, row in itineraries_df.iterrows():
-                label = f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} ({row['from_city']} → {row['destination_city']})"
+                label = (
+                    f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} "
+                    f"({row['from_city']} → {row['destination_city']})"
+                )
                 itin_options[label] = int(row["id"])
 
         with st.form("new_booking_request"):
@@ -1369,7 +1346,10 @@ def page_booking_requests():
                 from_city = st.text_input("مدينة الانطلاق", value="Cairo")
                 to_city = st.text_input("الوجهة الرئيسية", value="Riyadh")
                 days = st.number_input("عدد الأيام", min_value=1, max_value=60, value=7)
-                budget = st.number_input("الميزانية التقريبية (دولار)", min_value=100.0, max_value=100000.0, value=2500.0, step=100.0)
+                budget = st.number_input(
+                    "الميزانية التقريبية (دولار)", min_value=100.0, max_value=100000.0,
+                    value=2500.0, step=100.0
+                )
 
             st.markdown("#### ربط الطلب ببرنامج أو خطة (اختياري)")
             col3, col4 = st.columns(2)
@@ -1414,7 +1394,7 @@ def page_booking_requests():
                 st.success("✅ تم حفظ طلب الحجز.")
                 st.experimental_rerun()
 
-    # --- قائمة الطلبات ---
+    # قائمة الطلبات
     with tab_list:
         st.subheader("قائمة طلبات الحجز")
 
@@ -1430,13 +1410,12 @@ def page_hotels_admin():
     st.title("🏨 Hotels & Contracts (Admin Demo)")
 
     st.write(
-        "هذا القسم استعراضي للمستثمرين/الشركاء، يوضح كيف تدير المنصة "
-        "فنادقك وعقودك في الخلفية (Back-office)."
+        "هذا القسم يوضّح كيف يمكن للمنصة إدارة الفنادق والعقود في الخلفية (Back-office)."
     )
 
     tab1, tab2 = st.tabs(["الفنادق", "العقود"])
 
-    # --- الفنادق ---
+    # الفنادق
     with tab1:
         st.subheader("إضافة فندق جديد")
 
@@ -1481,10 +1460,10 @@ def page_hotels_admin():
         hotels_df = list_hotels()
         if hotels_df.empty:
             st.info("لا توجد فنادق مسجلة بعد.")
-            else:
+        else:
             st.dataframe(hotels_df, use_container_width=True)
 
-    # --- العقود ---
+    # العقود
     with tab2:
         st.subheader("إنشاء عقد جديد")
 
@@ -1583,7 +1562,6 @@ def page_ai_assistant():
         "هذا المساعد متصل حالياً بـ OpenAI فقط لأغراض العرض. "
         "يمكن ربطه لاحقاً بـ HUMAIN ONE / ALLAM أو نماذج أخرى."
     )
-
 
 # ==============================
 # 6) توجيه الصفحات
