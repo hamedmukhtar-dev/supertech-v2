@@ -1,0 +1,54 @@
+/* ===========================
+   HUMAIN Lifestyle – ICE & COFFEE EDITION
+   Brand UI Style System
+   =========================== */
+
+:root {
+  --saudi-green: #006C35;
+  --royal-gold: #D4AF37;
+  --night-black: #0C0C0C;
+  --smart-gray: #E6E6E6;
+  --sand-white: #F9F9F6;
+
+  --round: 16px;
+  --shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+
+body {
+  background: linear-gradient(135deg, var(--sand-white), var(--smart-gray));
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.hero-container {
+  background: var(--saudi-green);
+  padding: 40px;
+  border-radius: var(--round);
+  text-align: center;
+  color: white;
+  box-shadow: var(--shadow);
+  border: 2px solid var(--royal-gold);
+}
+
+.section-card {
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(12px);
+  border-radius: var(--round);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
+  transition: 0.25s ease;
+}
+
+.section-card:hover {
+  transform: translateY(-3px);
+  border: 1px solid var(--saudi-green);
+}
+
+h1, h2, h3 {
+  color: var(--night-black);
+}
+
+.highlight {
+  color: var(--royal-gold);
+  font-weight: bold;
+}
