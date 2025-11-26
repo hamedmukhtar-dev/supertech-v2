@@ -9,13 +9,101 @@ import streamlit as st
 from dotenv import load_dotenv
 
 # ==============================
-# 1) إعداد عام للتطبيق
+# 1) إعداد عام للتطبيق + الثيم السعودي
 # ==============================
 
 st.set_page_config(
     page_title="HUMAIN Lifestyle",
     page_icon="🌍",
     layout="wide",
+)
+
+# ثيم أخضر مستوحى من علم المملكة + ووتـرمارك
+SAUDI_THEME_CSS = """
+<style>
+/* خلفية التطبيق بالكامل */
+.stApp {
+    background: radial-gradient(circle at top left, #009639 0%, #006C35 40%, #004d26 80%);
+    background-attachment: fixed;
+    color: #f9f9f9 !important;
+    font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* حاوية المحتوى الأساسية */
+.block-container {
+    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.26);
+    padding: 2.5rem 2.2rem;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+}
+
+/* العناوين */
+h1, h2, h3, h4, h5, h6 {
+    color: #ffffff !important;
+}
+
+/* سايدبار */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #003818 0%, #005225 50%, #003818 100%);
+    border-right: 1px solid rgba(255,255,255,0.08);
+}
+[data-testid="stSidebar"] * {
+    color: #f0f4f0 !important;
+}
+
+/* الأزرار */
+.stButton>button {
+    background: linear-gradient(135deg, #00b36b, #00e693);
+    color: #01210f;
+    border-radius: 999px;
+    border: none;
+    padding: 0.6rem 1.6rem;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+}
+.stButton>button:hover {
+    filter: brightness(1.06);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+}
+
+/* حقول الإدخال */
+.stTextInput>div>div>input,
+.stTextArea textarea,
+.stSelectbox div[data-baseweb="select"],
+.stMultiSelect div[data-baseweb="select"],
+.stNumberInput input,
+.stDateInput input {
+    background: rgba(0,0,0,0.35) !important;
+    color: #f9f9f9 !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+}
+
+/* الجداول */
+[data-testid="stDataFrame"] {
+    background: rgba(0,0,0,0.35) !important;
+    border-radius: 14px !important;
+}
+
+/* ووتـرمارك العلم السعودي */
+.saudi-watermark {
+    position: fixed;
+    right: 2%;
+    bottom: 4%;
+    width: min(280px, 30vw);
+    opacity: 0.09;
+    z-index: -1;
+    filter: drop-shadow(0 0 18px rgba(0,0,0,0.65));
+}
+</style>
+"""
+
+st.markdown(SAUDI_THEME_CSS, unsafe_allow_html=True)
+st.markdown(
+    "<img class='saudi-watermark' src='https://upload.wikimedia.org/wikipedia/commons/0/0d/Flag_of_Saudi_Arabia.svg'>",
+    unsafe_allow_html=True,
 )
 
 load_dotenv()  # قراءة OPENAI_API_KEY من .env (لو موجود)
