@@ -139,7 +139,7 @@ def init_db():
             """
         )
 
-        # طلبات الحجز / Leads
+        # طلبات الحجز / Leads (تشمل: طيران، قطار، عمرة، استثمار... إلخ)
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS booking_requests (
@@ -873,41 +873,46 @@ def ai_general_chat(prompt: str) -> str:
 
 def page_home():
     st.title("🌍 HUMAIN Lifestyle")
-    st.subheader("منصة ذكية للسفر والترفيه — من الفكرة إلى التجربة، في مكان واحد.")
+    st.subheader("Your Gateway to KSA — منصّة حياة كاملة للمملكة العربية السعودية.")
 
     col1, col2 = st.columns([2, 1])
 
     with col1:
         st.markdown(
             """
-مرحباً بك في **HUMAIN Lifestyle** — نموذج أولي (Live Demo) لمنصة B2C ذكية:
+مرحباً بك في **HUMAIN Lifestyle** — بوابتك الذكية إلى المملكة:
 
-- تخطيط رحلات إلى السعودية (وخارجها لاحقاً) حسب **الميزانية والاهتمامات**.
-- إدارة عقود الفنادق والتكامل مع مزودي الخدمات (API Ready).
-- كتالوج أنشطة وتجارب داخل مدن مختلفة في السعودية.
-- بناء برامج (Packages) جاهزة للبيع مع إدارة طلبات الحجز (Leads).
-- دمج الذكاء الاصطناعي (اليوم عبر OpenAI، وغداً عبر HUMAIN ONE و ALLAM).
+- تخطيط رحلات وزيارات سياحية وترفيهية.
+- رحلات طيران وقطار (كنماذج طلبات الآن، وتكاملات لاحقاً).
+- برامج عمرة وحج تجريبية جاهزة للتطوير.
+- إدارة فنادق وعقود وأنشطة وتحوّلها إلى برامج قابلة للبيع.
+- استقبال طلبات مستثمرين وراغبي تأسيس أعمال في السعودية.
+
+كل ما يخص **الحياة في السعودية** — في مكان واحد.
 """
         )
 
     with col2:
         st.info(
             "**وضع العرض (Demo Mode)**\n\n"
-            "- لا توجد بعد تكاملات حقيقية مع خطوط طيران أو منصات ترفيه.\n"
-            "- الهدف هو عرض تجربة نهائية للمستخدم والمستثمر.\n"
-            "- يمكن ربط هذه المنصة بمصادر حجز حقيقية لاحقاً."
+            "- لا توجد بعد تكاملات مباشرة مع خطوط الطيران أو القطارات أو البنوك.\n"
+            "- جميع الطلبات تحفظ في النظام كـ Leads يمكن مراجعتها من الـ Admin.\n"
+            "- التصميم الحالي جاهز ليكون أساس لتكاملات مستقبلية مع مزودي الخدمات."
         )
 
     st.markdown("---")
-    st.markdown("### جرّب الآن 👇")
+    st.markdown("### كيف تبدأ؟")
     st.markdown(
-        "- **🧭 Trip Planner (B2C)** لتجربة تخطيط رحلة.\n"
-        "- **🎟️ Experiences & Activities** لاستعراض الأنشطة.\n"
-        "- **📝 Saved Itineraries** لرؤية خطط الرحلات المحفوظة.\n"
-        "- **📦 Packages / Programs** لبناء برامج جاهزة للبيع.\n"
-        "- **📥 Booking Requests (Admin)** لمراجعة طلبات الحجز.\n"
-        "- **🏨 Hotels & Contracts (Admin)** لإدارة الفنادق والعقود.\n"
-        "- **🤖 AI Assistant** للتحاور مع المساعد الذكي."
+        "- جرّب **🧭 Trip Planner (B2C)** لتخطيط رحلة.\n"
+        "- استخدم **✈️ Flights to KSA** لطلب عروض طيران.\n"
+        "- استخدم **🚄 Saudi Rail (Demo)** لطلب رحلات قطار.\n"
+        "- استخدم **🕋 Umrah & Hajj** لطلبات العمرة والحج.\n"
+        "- استعرض **🎟️ Experiences & Activities** للأنشطة داخل المملكة.\n"
+        "- حوّل الخطط إلى برامج عبر **📦 Packages / Programs**.\n"
+        "- راقب كل الطلبات من **📥 Booking Requests (Admin)**.\n"
+        "- للمستثمرين استخدم **💼 Invest in KSA (Gateway)**.\n"
+        "- إدارة الفنادق والعقود من **🏨 Hotels & Contracts (Admin)**.\n"
+        "- جرّب **🤖 AI Assistant** للحوار والشرح."
     )
 
 
@@ -1017,6 +1022,224 @@ def page_trip_planner():
             "هذه خطة تجريبية (Demo) مبنية على الذكاء الاصطناعي فقط، "
             "وليست مرتبطة بعد بأنظمة حجز حقيقية."
         )
+
+
+def page_flights():
+    st.title("✈️ Flights to KSA — طلب رحلات طيران إلى المملكة")
+
+    st.write(
+        "هذه الصفحة نموذج تجريبي لاستقبال طلبات رحلات الطيران إلى المملكة. "
+        "في النسخ المستقبلية يمكن ربطها بأنظمة NDC أو مزودي طيران."
+    )
+
+    with st.form("flights_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            traveller_name = st.text_input("اسم المسافر *")
+            traveller_email = st.text_input("البريد الإلكتروني (اختياري)")
+            traveller_phone = st.text_input("رقم الجوال / واتساب *")
+        with col2:
+            from_city = st.text_input("مدينة/مطار الانطلاق *", value="Cairo")
+            to_city = st.selectbox(
+                "الوجهة داخل المملكة *",
+                ["Riyadh", "Jeddah", "Makkah (via JED)", "Madina", "Dammam", "Abha", "Tabuk", "NEOM Region"],
+            )
+
+        col3, col4 = st.columns(2)
+        with col3:
+            depart_date = st.date_input("تاريخ الذهاب", value=date.today())
+            return_date = st.date_input("تاريخ العودة (إن وجد)", value=date.today())
+        with col4:
+            adults = st.number_input("عدد البالغين", min_value=1, max_value=9, value=1)
+            children = st.number_input("عدد الأطفال", min_value=0, max_value=9, value=0)
+            infants = st.number_input("عدد الرضع", min_value=0, max_value=5, value=0)
+
+        cabin = st.selectbox("درجة السفر", ["Economy", "Premium Economy", "Business", "First"])
+        notes = st.text_area("ملاحظات إضافية (مرونة التواريخ، شركة مفضّلة، ...)", height=120)
+
+        submitted = st.form_submit_button("📩 إرسال طلب الطيران")
+
+    if submitted:
+        if not traveller_name.strip() or not traveller_phone.strip() or not from_city.strip():
+            st.error("الرجاء تعبئة الحقول الإلزامية (الاسم، رقم الجوال، مدينة الانطلاق).")
+        else:
+            # نستخدم days كعدد الأيام بين الذهاب والعودة تقريبياً
+            try:
+                days_diff = (return_date - depart_date).days
+                days_val = max(days_diff, 0)
+            except Exception:
+                days_val = 0
+
+            budget_estimate = 0.0  # حالياً بدون ميزانية محددة
+            full_notes = (
+                f"رحلة طيران إلى السعودية.\n"
+                f"- تاريخ الذهاب: {depart_date}\n"
+                f"- تاريخ العودة: {return_date}\n"
+                f"- بالغين: {adults}, أطفال: {children}, رضع: {infants}\n"
+                f"- درجة السفر: {cabin}\n"
+                f"- ملاحظات: {notes}"
+            )
+
+            add_booking_request(
+                traveller_name=traveller_name.strip(),
+                traveller_email=traveller_email.strip(),
+                traveller_phone=traveller_phone.strip(),
+                from_city=from_city.strip(),
+                to_city=to_city,
+                days=days_val,
+                budget=float(budget_estimate),
+                notes=full_notes,
+                status="New",
+                source="Flights",
+                package_id=None,
+                itinerary_id=None,
+            )
+            st.success("✅ تم إرسال طلب رحلة الطيران وحفظه في النظام (قسم Booking Requests).")
+
+
+def page_rail():
+    st.title("🚄 Saudi Rail (Demo) — طلب رحلات قطار داخل المملكة")
+
+    st.write(
+        "هذه الصفحة نموذج تجريبي لطلبات القطار داخل السعودية. "
+        "يمكن لاحقاً ربطها بخدمات قطار الحرمين أو SAR."
+    )
+
+    with st.form("rail_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            traveller_name = st.text_input("اسم المسافر *")
+            traveller_phone = st.text_input("رقم الجوال / واتساب *")
+        with col2:
+            traveller_email = st.text_input("البريد الإلكتروني (اختياري)")
+
+        col3, col4 = st.columns(2)
+        with col3:
+            from_city = st.selectbox(
+                "محطة الانطلاق *",
+                ["Riyadh", "Jeddah", "Makkah", "Madina", "Dammam", "Al Khobar", "Abha"],
+            )
+        with col4:
+            to_city = st.selectbox(
+                "محطة الوصول *",
+                ["Riyadh", "Jeddah", "Makkah", "Madina", "Dammam", "Al Khobar", "Abha"],
+            )
+
+        travel_date = st.date_input("تاريخ الرحلة", value=date.today())
+        travel_time_pref = st.selectbox(
+            "أفضل فترة للرحيل",
+            ["صباحاً", "ظهراً", "مساءً", "مرن (لا مشكلة)"],
+        )
+        notes = st.text_area("ملاحظات إضافية (درجة التذكرة، مرونة الوقت، ...)", height=120)
+
+        submitted = st.form_submit_button("📩 إرسال طلب القطار")
+
+    if submitted:
+        if not traveller_name.strip() or not traveller_phone.strip():
+            st.error("الرجاء تعبئة الحقول الإلزامية (الاسم، رقم الجوال).")
+        else:
+            full_notes = (
+                f"رحلة قطار داخل السعودية.\n"
+                f"- التاريخ: {travel_date}\n"
+                f"- الفترة المفضلة: {travel_time_pref}\n"
+                f"- ملاحظات: {notes}"
+            )
+
+            add_booking_request(
+                traveller_name=traveller_name.strip(),
+                traveller_email=traveller_email.strip(),
+                traveller_phone=traveller_phone.strip(),
+                from_city=from_city,
+                to_city=to_city,
+                days=0,
+                budget=0.0,
+                notes=full_notes,
+                status="New",
+                source="Rail",
+                package_id=None,
+                itinerary_id=None,
+            )
+            st.success("✅ تم إرسال طلب القطار وحفظه في النظام.")
+
+
+def page_umrah_hajj():
+    st.title("🕋 Umrah & Hajj — طلبات العمرة والحج (Demo)")
+
+    st.write(
+        "هذه الصفحة مخصّصة لطلبات العمرة والحج. "
+        "يمكن لاحقاً ربطها بمزودي خدمات رسمية مثل Nusuk وغيرهم."
+    )
+
+    with st.form("umrah_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            traveller_name = st.text_input("اسم مقدم الطلب *")
+            traveller_phone = st.text_input("رقم الجوال / واتساب *")
+            traveller_email = st.text_input("البريد الإلكتروني (اختياري)")
+        with col2:
+            request_type = st.selectbox("نوع الطلب *", ["Umrah", "Hajj"])
+            from_city = st.text_input("مدينة/بلد الانطلاق *", value="Khartoum")
+            arrival_city = st.selectbox(
+                "مدينة الوصول في السعودية *",
+                ["Jeddah", "Makkah (via JED)", "Madina", "Riyadh"],
+            )
+
+        col3, col4 = st.columns(2)
+        with col3:
+            start_date = st.date_input("تاريخ الوصول المقترح", value=date.today())
+            nights = st.number_input("عدد الليالي", min_value=3, max_value=45, value=10)
+        with col4:
+            persons = st.number_input("عدد الأشخاص", min_value=1, max_value=50, value=2)
+            budget = st.number_input(
+                "الميزانية التقريبية لكل شخص (دولار)",
+                min_value=100.0,
+                max_value=10000.0,
+                value=800.0,
+                step=50.0,
+            )
+
+        stay_pref = st.selectbox(
+            "تفضيل السكن",
+            ["اقتصادي", "متوسط", "فاخر", "قريب جداً من الحرم", "لا يهم"],
+        )
+        notes = st.text_area(
+            "تفاصيل إضافية (مرافقيْن، احتياجات خاصة، مواعيد مفضلة، ...)",
+            height=140,
+        )
+
+        submitted = st.form_submit_button("📩 إرسال طلب العمرة / الحج")
+
+    if submitted:
+        if not traveller_name.strip() or not traveller_phone.strip() or not from_city.strip():
+            st.error("الرجاء تعبئة الحقول الإلزامية (الاسم، الجوال، مدينة الانطلاق).")
+        else:
+            total_budget = float(budget) * float(persons)
+            full_notes = (
+                f"طلب {request_type}.\n"
+                f"- بلد/مدينة الانطلاق: {from_city}\n"
+                f"- مدينة الوصول: {arrival_city}\n"
+                f"- عدد الليالي: {nights}\n"
+                f"- عدد الأشخاص: {persons}\n"
+                f"- تفضيل السكن: {stay_pref}\n"
+                f"- الميزانية التقريبية الكلية: {total_budget} USD\n"
+                f"- تفاصيل إضافية: {notes}"
+            )
+
+            add_booking_request(
+                traveller_name=traveller_name.strip(),
+                traveller_email=traveller_email.strip(),
+                traveller_phone=traveller_phone.strip(),
+                from_city=from_city.strip(),
+                to_city=arrival_city,
+                days=int(nights),
+                budget=total_budget,
+                notes=full_notes,
+                status="New",
+                source="Umrah/Hajj",
+                package_id=None,
+                itinerary_id=None,
+            )
+            st.success("✅ تم إرسال طلب العمرة / الحج وحفظه في النظام.")
 
 
 def page_activities():
@@ -1306,104 +1529,104 @@ def page_packages():
 
 
 def page_booking_requests():
-    st.title("📥 Booking Requests (Admin) — طلبات الحجز")
+    st.title("📥 Booking Requests (Admin) — كل طلبات الحجز")
 
     st.write(
-        "هنا يمكنك تسجيل ومراجعة طلبات الحجز (Leads) المرتبطة بالبرامج أو بخطط الرحلات."
+        "هنا ترى جميع الطلبات الواردة من: Trip Planner, Flights, Rail, Umrah/Hajj, Packages, Investor, وغيرها."
     )
 
-    tab_new, tab_list = st.tabs(["طلب جديد", "قائمة الطلبات"])
+    df = list_booking_requests()
+    if df.empty:
+        st.info("لا توجد طلبات حجز مسجلة حتى الآن.")
+        return
 
-    # طلب جديد
-    with tab_new:
-        st.subheader("تسجيل طلب حجز جديد")
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
-        packages_df = list_packages()
-        itineraries_df = list_itineraries()
+    st.caption(
+        "يمكن تطوير هذه الصفحة لاحقاً لإضافة فلاتر حسب المصدر (Flights, Rail, Umrah/Hajj, Investor ...) "
+        "وحسب الحالة (New, In Progress, Confirmed...)."
+    )
 
-        pkg_options: Dict[str, Optional[int]] = {"بدون ربط ببرنامج محدد": None}
-        if not packages_df.empty:
-            for _, row in packages_df.iterrows():
-                label = f"#{row['id']} — {row['name']} ({row['city']})"
-                pkg_options[label] = int(row["id"])
 
-        itin_options: Dict[str, Optional[int]] = {"بدون ربط بخطة محددة": None}
-        if not itineraries_df.empty:
-            for _, row in itineraries_df.iterrows():
-                label = (
-                    f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} "
-                    f"({row['from_city']} → {row['destination_city']})"
-                )
-                itin_options[label] = int(row["id"])
+def page_investor_gateway():
+    st.title("💼 Invest in KSA (Gateway) — بوابة المستثمرين إلى المملكة")
 
-        with st.form("new_booking_request"):
-            col1, col2 = st.columns(2)
-            with col1:
-                traveller_name = st.text_input("اسم العميل *")
-                traveller_email = st.text_input("البريد الإلكتروني (اختياري)")
-                traveller_phone = st.text_input("رقم الهاتف *")
-            with col2:
-                from_city = st.text_input("مدينة الانطلاق", value="Cairo")
-                to_city = st.text_input("الوجهة الرئيسية", value="Riyadh")
-                days = st.number_input("عدد الأيام", min_value=1, max_value=60, value=7)
-                budget = st.number_input(
-                    "الميزانية التقريبية (دولار)", min_value=100.0, max_value=100000.0,
-                    value=2500.0, step=100.0
-                )
+    st.write(
+        "هذه الصفحة مخصّصة لاستقبال طلبات المستثمرين وروّاد الأعمال الراغبين في دخول السوق السعودي. "
+        "الفكرة: المنصّة تصبح نقطة الدخول الأولى للحياة والأعمال في المملكة."
+    )
 
-            st.markdown("#### ربط الطلب ببرنامج أو خطة (اختياري)")
-            col3, col4 = st.columns(2)
-            with col3:
-                pkg_label = st.selectbox("ربط ببرنامج", list(pkg_options.keys()))
-                package_id = pkg_options[pkg_label]
-            with col4:
-                itin_label = st.selectbox("ربط بخطة رحلة", list(itin_options.keys()))
-                itinerary_id = itin_options[itin_label]
+    with st.form("investor_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            client_name = st.text_input("اسم الشخص / الجهة *")
+            client_email = st.text_input("البريد الإلكتروني (اختياري)")
+        with col2:
+            client_phone = st.text_input("رقم الجوال / واتساب *")
+            client_type = st.selectbox("نوع العميل *", ["Individual", "Company", "Family Office", "Fund"])
 
-            source = st.selectbox(
-                "مصدر الطلب",
-                ["Web", "Mobile", "Agent", "Other"],
+        target_city = st.selectbox(
+            "المدينة الرئيسية المستهدفة",
+            ["Riyadh", "Jeddah", "Al Khobar / Dammam", "NEOM Region", "AlUla", "No preference"],
+        )
+
+        st.markdown("#### الخدمات المطلوبة (يمكن اختيار أكثر من خدمة)")
+        services = st.multiselect(
+            "اختر الخدمات:",
+            [
+                "تأسيس شركة",
+                "الحصول على رخصة تجارية",
+                "إيجار مكتب / Co-working",
+                "إيجار شقة سكنية",
+                "فتح حساب بنكي",
+                "استشارات قانونية / نظامية",
+                "استشارات استثمارية",
+            ],
+        )
+
+        budget = st.number_input(
+            "الميزانية التقريبية (دولار) للاستثمار / التأسيس",
+            min_value=0.0,
+            max_value=10000000.0,
+            value=50000.0,
+            step=5000.0,
+        )
+
+        notes = st.text_area(
+            "شرح موجز عن نشاط الشركة أو فكرة المشروع والاحتياجات الخاصة",
+            height=160,
+        )
+
+        submitted = st.form_submit_button("📩 إرسال طلب المستثمر")
+
+    if submitted:
+        if not client_name.strip() or not client_phone.strip():
+            st.error("الرجاء تعبئة الحقول الإلزامية (الاسم، رقم الجوال).")
+        else:
+            full_notes = (
+                f"طلب مستثمر / جهة أعمال.\n"
+                f"- نوع العميل: {client_type}\n"
+                f"- المدينة المستهدفة: {target_city}\n"
+                f"- الخدمات المطلوبة: {', '.join(services) if services else 'غير محددة'}\n"
+                f"- الميزانية التقريبية: {budget} USD\n"
+                f"- تفاصيل إضافية: {notes}"
             )
-            status = st.selectbox(
-                "حالة الطلب",
-                ["New", "In Progress", "Confirmed", "Cancelled"],
+
+            add_booking_request(
+                traveller_name=client_name.strip(),
+                traveller_email=client_email.strip(),
+                traveller_phone=client_phone.strip(),
+                from_city="Investor Origin (unspecified)",
+                to_city=target_city,
+                days=0,
+                budget=float(budget),
+                notes=full_notes,
+                status="New",
+                source="Investor",
+                package_id=None,
+                itinerary_id=None,
             )
-
-            notes = st.text_area("ملاحظات / تفاصيل إضافية")
-
-            submitted_req = st.form_submit_button("💾 حفظ الطلب")
-
-        if submitted_req:
-            if not traveller_name.strip() or not traveller_phone.strip():
-                st.error("اسم العميل ورقم الهاتف مطلوبان.")
-            else:
-                add_booking_request(
-                    traveller_name=traveller_name.strip(),
-                    traveller_email=traveller_email.strip(),
-                    traveller_phone=traveller_phone.strip(),
-                    from_city=from_city.strip(),
-                    to_city=to_city.strip(),
-                    days=int(days),
-                    budget=float(budget),
-                    notes=notes.strip(),
-                    status=status,
-                    source=source,
-                    package_id=package_id,
-                    itinerary_id=itinerary_id,
-                )
-                st.success("✅ تم حفظ طلب الحجز.")
-                st.experimental_rerun()
-
-    # قائمة الطلبات
-    with tab_list:
-        st.subheader("قائمة طلبات الحجز")
-
-        df = list_booking_requests()
-        if df.empty:
-            st.info("لا توجد طلبات حجز مسجلة حتى الآن.")
-            return
-
-        st.dataframe(df, use_container_width=True, hide_index=True)
+            st.success("✅ تم إرسال طلب المستثمر وحفظه في النظام.")
 
 
 def page_hotels_admin():
@@ -1573,10 +1796,14 @@ page = st.sidebar.radio(
     [
         "🏠 Home",
         "🧭 Trip Planner (B2C)",
+        "✈️ Flights to KSA",
+        "🚄 Saudi Rail (Demo)",
+        "🕋 Umrah & Hajj",
         "🎟️ Experiences & Activities",
         "📝 Saved Itineraries",
         "📦 Packages / Programs",
         "📥 Booking Requests (Admin)",
+        "💼 Invest in KSA (Gateway)",
         "🏨 Hotels & Contracts (Admin)",
         "🤖 AI Assistant",
     ],
@@ -1586,6 +1813,12 @@ if page.startswith("🏠"):
     page_home()
 elif page.startswith("🧭"):
     page_trip_planner()
+elif page.startswith("✈️"):
+    page_flights()
+elif page.startswith("🚄"):
+    page_rail()
+elif page.startswith("🕋"):
+    page_umrah_hajj()
 elif page.startswith("🎟️"):
     page_activities()
 elif page.startswith("📝"):
@@ -1594,6 +1827,8 @@ elif page.startswith("📦"):
     page_packages()
 elif page.startswith("📥"):
     page_booking_requests()
+elif page.startswith("💼"):
+    page_investor_gateway()
 elif page.startswith("🏨"):
     page_hotels_admin()
 elif page.startswith("🤖"):
