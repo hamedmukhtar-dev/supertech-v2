@@ -2,7 +2,7 @@ import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import date, datetime
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 import pandas as pd
 import streamlit as st
@@ -111,6 +111,54 @@ def init_db():
                 month TEXT,
                 interests TEXT,
                 plan_text TEXT
+            );
+            """
+        )
+
+        # جدول البرامج / الباكجات
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS packages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                name TEXT NOT NULL,
+                city TEXT,
+                days INTEGER,
+                budget REAL,
+                base_hotel_id INTEGER,
+                activities_ids TEXT,
+                ai_plan_text TEXT,
+                target_segment TEXT,
+                price_from_usd REAL,
+                status TEXT,
+                notes TEXT,
+                source_itinerary_id INTEGER,
+                FOREIGN KEY (base_hotel_id) REFERENCES hotels(id),
+                FOREIGN KEY (source_itinerary_id) REFERENCES itineraries(id)
+            );
+            """
+        )
+
+        # جدول طلبات الحجز (Leads / Booking Requests)
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS booking_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                traveller_name TEXT,
+                traveller_email TEXT,
+                traveller_phone TEXT,
+                from_city TEXT,
+                to_city TEXT,
+                days INTEGER,
+                budget REAL,
+                notes TEXT,
+                status TEXT,
+                source TEXT,
+                package_id INTEGER,
+                itinerary_id INTEGER,
+                FOREIGN KEY (package_id) REFERENCES packages(id),
+                FOREIGN KEY (itinerary_id) REFERENCES itineraries(id)
             );
             """
         )
@@ -247,7 +295,7 @@ def init_db():
                 ),
 
                 # ======================
-                # Dammam & Al Khobar (Eastern Province)
+                # Dammam & Al Khobar
                 # ======================
                 (
                     "Dammam",
@@ -357,7 +405,7 @@ def init_db():
                 ),
 
                 # ======================
-                # NEOM Region (تجريبي للمستقبل)
+                # NEOM Region
                 # ======================
                 (
                     "NEOM Region",
@@ -370,7 +418,7 @@ def init_db():
                 ),
 
                 # ======================
-                # Diriyah (Riyadh Area)
+                # Diriyah
                 # ======================
                 (
                     "Diriyah",
@@ -396,7 +444,7 @@ def init_db():
 init_db()
 
 # ==============================
-# 3) CRUD للفنادق والعقود والأنشطة وخطط الرحلات
+# 3) CRUD للفنادق والعقود والأنشطة وخطط الرحلات والبرامج والطلبات
 # ==============================
 
 def add_hotel(
@@ -485,10 +533,10 @@ def list_contracts() -> pd.DataFrame:
     return df
 
 
-def list_activities(city_filter: str | None = None, category_filter: str | None = None) -> pd.DataFrame:
+def list_activities(city_filter: Optional[str] = None, category_filter: Optional[str] = None) -> pd.DataFrame:
     base_query = "SELECT * FROM activities"
-    params = []
-    conditions = []
+    params: List[Any] = []
+    conditions: List[str] = []
 
     if city_filter and city_filter != "الكل":
         conditions.append("city = ?")
@@ -505,6 +553,16 @@ def list_activities(city_filter: str | None = None, category_filter: str | None 
 
     with get_conn() as conn:
         df = pd.read_sql_query(base_query, conn, params=params)
+    return df
+
+
+def get_activities_by_ids(ids: List[int]) -> pd.DataFrame:
+    if not ids:
+        return pd.DataFrame()
+    placeholders = ",".join(["?"] * len(ids))
+    query = f"SELECT * FROM activities WHERE id IN ({placeholders}) ORDER BY city, name"
+    with get_conn() as conn:
+        df = pd.read_sql_query(query, conn, params=ids)
     return df
 
 
@@ -579,7 +637,7 @@ def list_itineraries() -> pd.DataFrame:
     return df
 
 
-def get_itinerary(itinerary_id: int) -> Dict[str, Any] | None:
+def get_itinerary(itinerary_id: int) -> Optional[Dict[str, Any]]:
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -592,6 +650,177 @@ def get_itinerary(itinerary_id: int) -> Dict[str, Any] | None:
 
         columns = [desc[0] for desc in cur.description]
         return dict(zip(columns, row))
+
+
+def add_package(
+    name: str,
+    city: str,
+    days: int,
+    budget: float,
+    base_hotel_id: Optional[int],
+    activities_ids: List[int],
+    ai_plan_text: str,
+    target_segment: str,
+    price_from_usd: float,
+    status: str,
+    notes: str,
+    source_itinerary_id: Optional[int],
+) -> None:
+    activities_str = ",".join(str(x) for x in activities_ids) if activities_ids else ""
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO packages
+            (
+                created_at,
+                name,
+                city,
+                days,
+                budget,
+                base_hotel_id,
+                activities_ids,
+                ai_plan_text,
+                target_segment,
+                price_from_usd,
+                status,
+                notes,
+                source_itinerary_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.utcnow().isoformat(),
+                name,
+                city,
+                days,
+                budget,
+                base_hotel_id,
+                activities_str,
+                ai_plan_text,
+                target_segment,
+                price_from_usd,
+                status,
+                notes,
+                source_itinerary_id,
+            ),
+        )
+        conn.commit()
+
+
+def list_packages() -> pd.DataFrame:
+    with get_conn() as conn:
+        df = pd.read_sql_query(
+            """
+            SELECT
+                id,
+                created_at,
+                name,
+                city,
+                days,
+                budget,
+                target_segment,
+                price_from_usd,
+                status,
+                source_itinerary_id
+            FROM packages
+            ORDER BY datetime(created_at) DESC
+            """,
+            conn,
+        )
+    return df
+
+
+def get_package(package_id: int) -> Optional[Dict[str, Any]]:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM packages WHERE id = ?", (package_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        columns = [desc[0] for desc in cur.description]
+        return dict(zip(columns, row))
+
+
+def add_booking_request(
+    traveller_name: str,
+    traveller_email: str,
+    traveller_phone: str,
+    from_city: str,
+    to_city: str,
+    days: int,
+    budget: float,
+    notes: str,
+    status: str,
+    source: str,
+    package_id: Optional[int],
+    itinerary_id: Optional[int],
+) -> None:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO booking_requests
+            (
+                created_at,
+                traveller_name,
+                traveller_email,
+                traveller_phone,
+                from_city,
+                to_city,
+                days,
+                budget,
+                notes,
+                status,
+                source,
+                package_id,
+                itinerary_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.utcnow().isoformat(),
+                traveller_name,
+                traveller_email,
+                traveller_phone,
+                from_city,
+                to_city,
+                days,
+                budget,
+                notes,
+                status,
+                source,
+                package_id,
+                itinerary_id,
+            ),
+        )
+        conn.commit()
+
+
+def list_booking_requests() -> pd.DataFrame:
+    with get_conn() as conn:
+        df = pd.read_sql_query(
+            """
+            SELECT
+                id,
+                created_at,
+                traveller_name,
+                traveller_email,
+                traveller_phone,
+                from_city,
+                to_city,
+                days,
+                budget,
+                status,
+                source,
+                package_id,
+                itinerary_id
+            FROM booking_requests
+            ORDER BY datetime(created_at) DESC
+            """,
+            conn,
+        )
+    return df
 
 
 # ==============================
@@ -686,6 +915,7 @@ def page_home():
 - تخطيط رحلات إلى السعودية (وخارجها لاحقاً) حسب **الميزانية والاهتمامات**.
 - إدارة عقود الفنادق والتكامل مع مزودي الخدمات (API Ready).
 - كتالوج أنشطة وتجارب داخل مدن مختلفة في السعودية.
+- بناء برامج (Packages) جاهزة للبيع مع إدارة طلبات الحجز (Leads).
 - دمج الذكاء الاصطناعي (اليوم عبر OpenAI، وغداً عبر HUMAIN ONE و ALLAM).
 
 هذه النسخة مهيّأة لتكون **عرض توضيحي (Demo)** يمكن مشاركته مع:
@@ -709,6 +939,8 @@ def page_home():
         "- من القائمة الجانبية اختر **🧭 Trip Planner (B2C)** لتجربة تخطيط رحلة.\n"
         "- أو ادخل إلى **🎟️ Experiences & Activities** لاستعراض الأنشطة.\n"
         "- أو جرّب **📝 Saved Itineraries** لرؤية خطط الرحلات المحفوظة.\n"
+        "- أو ادخل إلى **📦 Packages / Programs** لبناء برامج جاهزة للبيع.\n"
+        "- أو ادخل إلى **📥 Booking Requests (Admin)** لمراجعة طلبات الحجز.\n"
         "- أو ادخل إلى **🏨 Hotels & Contracts (Admin)** لاستكشاف إدارة الفنادق.\n"
         "- أو افتح **🤖 AI Assistant** للتحاور مع المساعد الذكي."
     )
@@ -915,6 +1147,285 @@ def page_itineraries():
             st.write(details.get("plan_text") or "")
 
 
+def page_packages():
+    st.title("📦 Packages / Programs — برامج جاهزة للبيع")
+
+    st.write(
+        "في هذه الصفحة يمكنك تحويل خطط الرحلات المحفوظة إلى برامج (Packages) "
+        "محددة بمدينة، فندق، أنشطة، وسعر تقريبي."
+    )
+
+    tab_create, tab_list = st.tabs(["إنشاء برنامج جديد", "قائمة البرامج"])
+
+    # --- إنشاء برنامج جديد ---
+    with tab_create:
+        itineraries_df = list_itineraries()
+        if itineraries_df.empty:
+            st.info("لا توجد خطط رحلات محفوظة بعد. جرّب إنشاء خطة من صفحة Trip Planner أولاً.")
+        else:
+            st.subheader("1) اختر خطة رحلة كأساس للبرنامج")
+
+            labels = []
+            id_mapping: Dict[str, int] = {}
+            for _, row in itineraries_df.iterrows():
+                label = f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} ({row['from_city']} → {row['destination_city']}, {row['days']} أيام)"
+                labels.append(label)
+                id_mapping[label] = int(row["id"])
+
+            selected_label = st.selectbox("اختر خطة", labels)
+            source_itinerary_id = id_mapping[selected_label]
+            itinerary_details = get_itinerary(source_itinerary_id)
+
+            default_city = itinerary_details["destination_city"] or ""
+            default_days = int(itinerary_details["days"] or 7)
+            default_budget = float(itinerary_details["budget"] or 2500.0)
+            default_plan_text = itinerary_details.get("plan_text") or ""
+
+            st.markdown("---")
+            st.subheader("2) تعريف البرنامج")
+
+            hotels_df = list_hotels()
+            hotel_options: Dict[str, Optional[int]] = {"بدون فندق محدد": None}
+            if not hotels_df.empty:
+                for _, row in hotels_df.iterrows():
+                    label = f"{row['name']} ({row['city'] or ''})"
+                    hotel_options[label] = int(row["id"])
+
+            # الأنشطة في نفس المدينة
+            activities_df = list_activities(city_filter=default_city, category_filter=None)
+            activity_labels: List[str] = []
+            activity_map: Dict[str, int] = {}
+            for _, row in activities_df.iterrows():
+                lbl = f"{row['name']} — {row['city']} ({row['category']})"
+                activity_labels.append(lbl)
+                activity_map[lbl] = int(row["id"])
+
+            with st.form("create_package_form"):
+                pkg_name = st.text_input("اسم البرنامج *", value=f"برنامج {default_city} {default_days} أيام")
+                pkg_city = st.text_input("مدينة البرنامج", value=default_city)
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    pkg_days = st.number_input("عدد الأيام", min_value=1, max_value=60, value=default_days)
+                with col2:
+                    pkg_budget = st.number_input("الميزانية التقديرية (من الواقع)", min_value=100.0, max_value=50000.0, value=default_budget, step=100.0)
+                with col3:
+                    pkg_price_from = st.number_input("سعر البيع (ابتداءً من)", min_value=100.0, max_value=100000.0, value=default_budget, step=100.0)
+
+                target_segment = st.selectbox(
+                    "الفئة المستهدفة",
+                    ["Individuals", "Families", "Groups", "VIP", "Umrah"],
+                )
+
+                base_hotel_label = st.selectbox(
+                    "الفندق الأساسي في البرنامج (اختياري)",
+                    list(hotel_options.keys()),
+                )
+                base_hotel_id = hotel_options[base_hotel_label]
+
+                st.markdown("#### الأنشطة المقترحة داخل البرنامج")
+                if activities_df.empty:
+                    st.info("لا توجد أنشطة مسجلة لهذه المدينة بعد. يمكن إضافتها لاحقاً من قسم Activities.")
+                    selected_activities_labels: List[str] = []
+                else:
+                    selected_activities_labels = st.multiselect(
+                        "اختر الأنشطة التي تدخل ضمن هذا البرنامج",
+                        activity_labels,
+                    )
+
+                pkg_status = st.selectbox("حالة البرنامج", ["Draft", "Active"])
+                pkg_notes = st.text_area("ملاحظات إضافية (اختياري)")
+
+                st.markdown("#### خطة الرحلة المرتبطة بالبرنامج (للإطلاع)")
+                st.code(default_plan_text or "لا توجد خطة محفوظة.", language="markdown")
+
+                submitted_pkg = st.form_submit_button("💾 حفظ البرنامج")
+
+            if submitted_pkg:
+                if not pkg_name.strip():
+                    st.error("اسم البرنامج مطلوب.")
+                else:
+                    activities_ids = [activity_map[lbl] for lbl in selected_activities_labels]
+                    add_package(
+                        name=pkg_name.strip(),
+                        city=pkg_city.strip(),
+                        days=int(pkg_days),
+                        budget=float(pkg_budget),
+                        base_hotel_id=base_hotel_id,
+                        activities_ids=activities_ids,
+                        ai_plan_text=default_plan_text,
+                        target_segment=target_segment,
+                        price_from_usd=float(pkg_price_from),
+                        status=pkg_status,
+                        notes=pkg_notes.strip(),
+                        source_itinerary_id=source_itinerary_id,
+                    )
+                    st.success("✅ تم إنشاء البرنامج وحفظه في النظام.")
+                    st.experimental_rerun()
+
+    # --- عرض قائمة البرامج ---
+    with tab_list:
+        st.subheader("قائمة البرامج المتاحة")
+
+        packages_df = list_packages()
+        if packages_df.empty:
+            st.info("لا توجد برامج محفوظة حتى الآن.")
+            return
+
+        st.dataframe(packages_df, use_container_width=True, hide_index=True)
+
+        st.markdown("---")
+        labels = []
+        id_map: Dict[str, int] = {}
+        for _, row in packages_df.iterrows():
+            label = f"#{row['id']} — {row['name']} ({row['city']}, {row['days']} أيام)"
+            labels.append(label)
+            id_map[label] = int(row["id"])
+
+        selected_pkg_label = st.selectbox("اختر برنامج لعرض التفاصيل", labels)
+
+        if selected_pkg_label:
+            pkg_id = id_map[selected_pkg_label]
+            details = get_package(pkg_id)
+            if not details:
+                st.error("تعذر تحميل تفاصيل البرنامج.")
+                return
+
+            st.markdown("### تفاصيل البرنامج")
+            st.write(f"📦 اسم البرنامج: **{details.get('name')}**")
+            st.write(f"📍 المدينة: {details.get('city') or 'غير محددة'}")
+            st.write(f"🗓️ عدد الأيام: {details.get('days')}")
+            st.write(f"💰 الميزانية المرجعية: {details.get('budget')} USD")
+            st.write(f"💵 سعر البيع (ابتداءً من): {details.get('price_from_usd')} USD")
+            st.write(f"🎯 الفئة المستهدفة: {details.get('target_segment') or 'غير محددة'}")
+            st.write(f"📊 الحالة: {details.get('status') or 'Draft'}")
+            st.write(f"🕒 تم الإنشاء في: {details.get('created_at')}")
+
+            if details.get("notes"):
+                st.markdown("#### ملاحظات البرنامج")
+                st.write(details["notes"])
+
+            st.markdown("---")
+            # عرض الأنشطة المرتبطة
+            activities_ids_str = details.get("activities_ids") or ""
+            ids_list: List[int] = []
+            if activities_ids_str.strip():
+                try:
+                    ids_list = [int(x) for x in activities_ids_str.split(",") if x.strip().isdigit()]
+                except Exception:
+                    ids_list = []
+
+            if ids_list:
+                st.markdown("#### الأنشطة المرتبطة بالبرنامج")
+                df_acts = get_activities_by_ids(ids_list)
+                if not df_acts.empty:
+                    for _, row in df_acts.iterrows():
+                        st.write(f"- {row['name']} — {row['city']} ({row['category']}) — تقريباً {row['approx_price_usd']} USD")
+                else:
+                    st.info("لا يمكن تحميل تفاصيل الأنشطة المرتبطة.")
+            else:
+                st.info("لا توجد أنشطة مرتبطة لهذا البرنامج حالياً.")
+
+            st.markdown("---")
+            st.markdown("#### الخطة التفصيلية (من خطة الرحلة الأصلية)")
+            st.write(details.get("ai_plan_text") or "لا توجد خطة مرتبطة.")
+
+
+def page_booking_requests():
+    st.title("📥 Booking Requests (Admin) — طلبات الحجز")
+
+    st.write(
+        "في هذه الصفحة يمكنك تسجيل ومراجعة طلبات الحجز (Leads) "
+        "المرتبطة بالبرامج أو بخطط الرحلات."
+    )
+
+    tab_new, tab_list = st.tabs(["طلب جديد", "قائمة الطلبات"])
+
+    # --- طلب جديد ---
+    with tab_new:
+        st.subheader("تسجيل طلب حجز جديد")
+
+        packages_df = list_packages()
+        itineraries_df = list_itineraries()
+
+        pkg_options: Dict[str, Optional[int]] = {"بدون ربط ببرنامج محدد": None}
+        if not packages_df.empty:
+            for _, row in packages_df.iterrows():
+                label = f"#{row['id']} — {row['name']} ({row['city']})"
+                pkg_options[label] = int(row["id"])
+
+        itin_options: Dict[str, Optional[int]] = {"بدون ربط بخطة محددة": None}
+        if not itineraries_df.empty:
+            for _, row in itineraries_df.iterrows():
+                label = f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} ({row['from_city']} → {row['destination_city']})"
+                itin_options[label] = int(row["id"])
+
+        with st.form("new_booking_request"):
+            col1, col2 = st.columns(2)
+            with col1:
+                traveller_name = st.text_input("اسم العميل *")
+                traveller_email = st.text_input("البريد الإلكتروني (اختياري)")
+                traveller_phone = st.text_input("رقم الهاتف *")
+            with col2:
+                from_city = st.text_input("مدينة الانطلاق", value="Cairo")
+                to_city = st.text_input("الوجهة الرئيسية", value="Riyadh")
+                days = st.number_input("عدد الأيام", min_value=1, max_value=60, value=7)
+                budget = st.number_input("الميزانية التقريبية (دولار)", min_value=100.0, max_value=100000.0, value=2500.0, step=100.0)
+
+            st.markdown("#### ربط الطلب ببرنامج أو خطة (اختياري)")
+            col3, col4 = st.columns(2)
+            with col3:
+                pkg_label = st.selectbox("ربط ببرنامج", list(pkg_options.keys()))
+                package_id = pkg_options[pkg_label]
+            with col4:
+                itin_label = st.selectbox("ربط بخطة رحلة", list(itin_options.keys()))
+                itinerary_id = itin_options[itin_label]
+
+            source = st.selectbox(
+                "مصدر الطلب",
+                ["Web", "Mobile", "Agent", "Other"],
+            )
+            status = st.selectbox(
+                "حالة الطلب",
+                ["New", "In Progress", "Confirmed", "Cancelled"],
+            )
+
+            notes = st.text_area("ملاحظات / تفاصيل إضافية")
+
+            submitted_req = st.form_submit_button("💾 حفظ الطلب")
+
+        if submitted_req:
+            if not traveller_name.strip() or not traveller_phone.strip():
+                st.error("اسم العميل ورقم الهاتف مطلوبان.")
+            else:
+                add_booking_request(
+                    traveller_name=traveller_name.strip(),
+                    traveller_email=traveller_email.strip(),
+                    traveller_phone=traveller_phone.strip(),
+                    from_city=from_city.strip(),
+                    to_city=to_city.strip(),
+                    days=int(days),
+                    budget=float(budget),
+                    notes=notes.strip(),
+                    status=status,
+                    source=source,
+                    package_id=package_id,
+                    itinerary_id=itinerary_id,
+                )
+                st.success("✅ تم حفظ طلب الحجز.")
+                st.experimental_rerun()
+
+    # --- قائمة الطلبات ---
+    with tab_list:
+        st.subheader("قائمة طلبات الحجز")
+
+        df = list_booking_requests()
+        if df.empty:
+            st.info("لا توجد طلبات حجز مسجلة حتى الآن.")
+            return
+
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+
 def page_hotels_admin():
     st.title("🏨 Hotels & Contracts (Admin Demo)")
 
@@ -970,7 +1481,7 @@ def page_hotels_admin():
         hotels_df = list_hotels()
         if hotels_df.empty:
             st.info("لا توجد فنادق مسجلة بعد.")
-        else:
+            else:
             st.dataframe(hotels_df, use_container_width=True)
 
     # --- العقود ---
@@ -1086,6 +1597,8 @@ page = st.sidebar.radio(
         "🧭 Trip Planner (B2C)",
         "🎟️ Experiences & Activities",
         "📝 Saved Itineraries",
+        "📦 Packages / Programs",
+        "📥 Booking Requests (Admin)",
         "🏨 Hotels & Contracts (Admin)",
         "🤖 AI Assistant",
     ],
@@ -1099,6 +1612,10 @@ elif page.startswith("🎟️"):
     page_activities()
 elif page.startswith("📝"):
     page_itineraries()
+elif page.startswith("📦"):
+    page_packages()
+elif page.startswith("📥"):
+    page_booking_requests()
 elif page.startswith("🏨"):
     page_hotels_admin()
 elif page.startswith("🤖"):
