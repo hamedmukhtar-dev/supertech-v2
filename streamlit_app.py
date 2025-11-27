@@ -1,3 +1,5 @@
+# streamlit_app.py
+
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -27,7 +29,8 @@ DB_PATH = "humain_lifestyle.db"
 
 @contextmanager
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    # check_same_thread يسمح بتعامل Streamlit مع نفس الاتصال بأمان نسبي
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     try:
         yield conn
     finally:
@@ -155,6 +158,21 @@ def init_db():
                 itinerary_id INTEGER,
                 FOREIGN KEY (package_id) REFERENCES packages(id),
                 FOREIGN KEY (itinerary_id) REFERENCES itineraries(id)
+            );
+            """
+        )
+
+        # ✅ Pilot Signups — للاشتراك السريع في نسخة تجريبية
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS pilot_signups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                name TEXT,
+                email TEXT,
+                phone TEXT,
+                interest TEXT,
+                notes TEXT
             );
             """
         )
@@ -418,9 +436,8 @@ def init_db():
 init_db()
 
 # ==============================
-# 3) دوال CRUD
+# 3) دوال CRUD + Caching
 # ==============================
-
 
 def add_hotel(
     name: str,
@@ -443,8 +460,10 @@ def add_hotel(
             (name, city, country, contact_name, contact_email, contact_phone, int(has_api), notes),
         )
         conn.commit()
+    list_hotels.clear()  # invalidate cache
 
 
+@st.cache_data(ttl=60)
 def list_hotels() -> pd.DataFrame:
     with get_conn() as conn:
         df = pd.read_sql_query("SELECT * FROM hotels ORDER BY id DESC", conn)
@@ -484,8 +503,10 @@ def add_contract(
             ),
         )
         conn.commit()
+    list_contracts.clear()
 
 
+@st.cache_data(ttl=60)
 def list_contracts() -> pd.DataFrame:
     query = """
     SELECT
@@ -508,6 +529,7 @@ def list_contracts() -> pd.DataFrame:
     return df
 
 
+@st.cache_data(ttl=60)
 def list_activities(city_filter: Optional[str] = None, category_filter: Optional[str] = None) -> pd.DataFrame:
     base_query = "SELECT * FROM activities"
     params: List[Any] = []
@@ -585,8 +607,10 @@ def save_itinerary(
             ),
         )
         conn.commit()
+    list_itineraries.clear()
 
 
+@st.cache_data(ttl=60)
 def list_itineraries() -> pd.DataFrame:
     with get_conn() as conn:
         df = pd.read_sql_query(
@@ -677,8 +701,10 @@ def add_package(
             ),
         )
         conn.commit()
+    list_packages.clear()
 
 
+@st.cache_data(ttl=60)
 def list_packages() -> pd.DataFrame:
     with get_conn() as conn:
         df = pd.read_sql_query(
@@ -766,8 +792,10 @@ def add_booking_request(
             ),
         )
         conn.commit()
+    list_booking_requests.clear()
 
 
+@st.cache_data(ttl=60)
 def list_booking_requests() -> pd.DataFrame:
     with get_conn() as conn:
         df = pd.read_sql_query(
@@ -795,6 +823,21 @@ def list_booking_requests() -> pd.DataFrame:
     return df
 
 
+# ✅ Pilot signup CRUD
+def add_pilot_signup(name: str, email: str, phone: str, interest: str, notes: str) -> None:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO pilot_signups
+            (created_at, name, email, phone, interest, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (datetime.utcnow().isoformat(), name.strip(), email.strip(), phone.strip(), interest.strip(), notes.strip()),
+        )
+        conn.commit()
+
+
 # ==============================
 # 4) تكامل OpenAI
 # ==============================
@@ -803,7 +846,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 try:
     from openai import OpenAI
-
     client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 except Exception:
     client = None
@@ -903,6 +945,39 @@ def page_home():
             "- البنية جاهزة للربط مع HUMAIN ONE، ALLAM، وموفّري خدمات في السعودية لاحقاً."
         )
 
+    # ✅ Pilot Signup — فورم اشتراك سريع
+    st.markdown("---")
+    st.subheader("🚀 Pilot Signup — اشترك للتجربة المبكرة")
+
+    with st.form("pilot_signup_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            ps_name = st.text_input("الاسم *")
+            ps_email = st.text_input("البريد الإلكتروني *")
+        with c2:
+            ps_phone = st.text_input("الهاتف *")
+            ps_interest = st.selectbox(
+                "الاهتمام الرئيسي",
+                [
+                    "Trip Planner",
+                    "Umrah/Hajj",
+                    "Investor Gateway",
+                    "Lifestyle/Services",
+                    "Health/Insurance",
+                    "Education/Jobs",
+                    "Other",
+                ],
+            )
+        ps_notes = st.text_area("ملاحظات إضافية (اختياري)")
+        ps_submit = st.form_submit_button("✅ اشترك الآن")
+
+    if ps_submit:
+        if not ps_name.strip() or not ps_email.strip() or not ps_phone.strip():
+            st.error("الاسم والبريد والهاتف مطلوبة.")
+        else:
+            add_pilot_signup(ps_name, ps_email, ps_phone, ps_interest, ps_notes)
+            st.success("تم التسجيل بنجاح! سنعاود التواصل معك قريبًا.")
+
     st.markdown("---")
     st.markdown("### 👥 من المنصّة دي موجهة لمين؟")
 
@@ -959,6 +1034,12 @@ def page_home():
 - 🏨 **Hotels & Contracts (Admin)** → إدارة الفنادق والعقود الخلفية (Back-office).  
 - 🤖 **AI Assistant** → مساعد ذكي مدمج داخل المنصّة.
 """
+    )
+
+    st.markdown("---")
+    st.caption(
+        "بالدخول واستخدامك للخدمة فأنت توافق على [📄 Privacy Policy] و[📜 Terms of Service]. "
+        "يمكن فتحهما من القائمة الجانبية."
     )
 
 
@@ -2094,10 +2175,10 @@ def page_health_insurance():
                 value=1000.0,
                 step=100.0,
             )
-            time_frame = st.selectbox(
-                "متى تريد بدء التغطية / الخدمة؟",
-                ["خلال شهر", "خلال 3 أشهر", "غير محدد"],
-            )
+        time_frame = st.selectbox(
+            "متى تريد بدء التغطية / الخدمة؟",
+            ["خلال شهر", "خلال 3 أشهر", "غير محدد"],
+        )
 
         details = st.text_area(
             "تفاصيل إضافية عن الاحتياج الطبي أو التأميني",
@@ -2240,7 +2321,27 @@ def page_education_jobs():
 
 
 # ==============================
-# 7) توجيه الصفحات
+# 7) صفحات قانونية بسيطة
+# ==============================
+
+LEGAL_PRIVACY = """
+### Privacy Policy
+هذا نص تجريبي لسياسة الخصوصية (Placeholder). سيتم استبداله بسياسة قانونية معتمدة لاحقًا.
+"""
+
+LEGAL_TERMS = """
+### Terms of Service
+هذا نص تجريبي لشروط الاستخدام (Placeholder). سيتم استبداله بنص قانوني معتمد لاحقًا.
+"""
+
+def page_legal(title: str, md: str):
+    render_header()
+    st.title(title)
+    st.markdown(md)
+
+
+# ==============================
+# 8) توجيه الصفحات + HUMAIN Copilot (Sidebar)
 # ==============================
 
 st.sidebar.title("HUMAIN Lifestyle 🌍")
@@ -2262,9 +2363,42 @@ page = st.sidebar.radio(
         "📥 Booking Requests (Admin)",
         "🏨 Hotels & Contracts (Admin)",
         "🤖 AI Assistant",
+        "📄 Privacy Policy",
+        "📜 Terms of Service",
     ],
 )
 
+# 🤖 HUMAIN AI Copilot (Sidebar) — سياقي حسب الصفحة الحالية
+with st.sidebar.expander("🤖 HUMAIN AI Copilot", expanded=False):
+    ai_prompt_sidebar = st.text_area(
+        "اكتب سؤالك للمساعد الذكي (مرتبط بالصفحة الحالية)",
+        key="sidebar_ai_prompt",
+        height=120,
+    )
+    if st.button("💬 اسأل HUMAIN AI", key="sidebar_ai_btn"):
+        if not ai_prompt_sidebar.strip():
+            st.warning("اكتب سؤالك أولاً.")
+        else:
+            contextual_prompt = f"""
+أنت مساعد HUMAIN AI داخل منصة HUMAIN Lifestyle.
+الصفحة الحالية في الواجهة هي: "{page}"
+قدّم إجابة قصيرة وعملية مرتبطة بهذه الصفحة قدر الإمكان:
+- لو الصفحة Trip Planner → ساعد في تحسين خطة الرحلة أو اقتراح أنشطة.
+- لو الصفحة Umrah & Hajj → وضّح أفكار برامج عمرة/حج وخيارات السكن/النقل.
+- لو الصفحة Invest in KSA → ساعد على فهم خطوات الاستثمار والخدمات المطلوبة.
+- لو الصفحة Local Lifestyle → اقترح خدمات/أماكن داخل المدن السعودية.
+- لو الصفحة Health & Insurance → وضّح خيارات التأمين أو المستشفيات.
+- لو الصفحة Education & Jobs → ساعد في التعليم/الوظائف داخل المملكة.
+- لو صفحة Admin (Booking Requests / Hotels) → وضّح كيف تُستخدم الشاشة إدارياً.
+سؤال المستخدم:
+{ai_prompt_sidebar.strip()}
+"""
+            with st.spinner("جاري توليد رد HUMAIN AI..."):
+                answer = ai_general_chat(contextual_prompt)
+            st.markdown("**رد HUMAIN AI:**")
+            st.write(answer)
+
+# توجيه الصفحات
 if page.startswith("🏠"):
     page_home()
 elif page.startswith("🧭"):
@@ -2295,3 +2429,7 @@ elif page.startswith("🏨"):
     page_hotels_admin()
 elif page.startswith("🤖"):
     page_ai_assistant()
+elif page.startswith("📄"):
+    page_legal("Privacy Policy", LEGAL_PRIVACY)
+elif page.startswith("📜"):
+    page_legal("Terms of Service", LEGAL_TERMS)
