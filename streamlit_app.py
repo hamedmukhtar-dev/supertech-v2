@@ -93,7 +93,7 @@ def init_db():
         # خطط الرحلات
         cur.execute(
             """
-            CREATE TABLE IF NOT NOT EXISTS itineraries (
+            CREATE TABLE IF NOT EXISTS itineraries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 created_at TEXT NOT NULL,
                 traveller_name TEXT,
@@ -1418,19 +1418,7 @@ def page_booking_requests():
 
             source = st.selectbox(
                 "مصدر الطلب",
-                [
-                    "Web",
-                    "Mobile",
-                    "Agent",
-                    "Flights",
-                    "Rail",
-                    "Umrah/Hajj",
-                    "Investor",
-                    "Lifestyle",
-                    "Health/Insurance",
-                    "Education/Jobs",
-                    "Other",
-                ],
+                ["Web", "Mobile", "Agent", "Flights", "Rail", "Umrah/Hajj", "Investor", "Lifestyle", "Health/Insurance", "Education/Jobs", "Other"],
             )
             status = st.selectbox(
                 "حالة الطلب",
@@ -1502,6 +1490,7 @@ def page_hotels_admin():
     )
 
     tab1, tab2 = st.tabs(["الفنادق", "العقود"])
+
 
     # الفنادق
     with tab1:
@@ -2257,7 +2246,7 @@ def page_education_jobs():
 
 st.sidebar.title("HUMAIN Lifestyle 🌍")
 
-# 🤖 HUMAIN AI Copilot (Sidebar)
+# 🤖 HUMAIN AI Copilot في الـ Sidebar (متاح من أي صفحة)
 with st.sidebar.expander("🤖 HUMAIN AI Copilot", expanded=False):
     ai_prompt = st.text_area(
         "اكتب سؤالك للمساعد الذكي",
@@ -2295,7 +2284,7 @@ page = st.sidebar.radio(
     ],
 )
 
-# توجيه الصفحات حسب الاختيار
+# توجيه الصفحات
 if page.startswith("🏠"):
     page_home()
 elif page.startswith("🧭"):
