@@ -1,54 +1,72 @@
-/* ===========================
-   HUMAIN Lifestyle – ICE & COFFEE EDITION
-   Brand UI Style System
-   =========================== */
+/* ============================== */
+/* HUMAIN Lifestyle — Global Theme */
+/* Saudi Green + Gold Identity     */
+/* ============================== */
 
-:root {
-  --saudi-green: #006C35;
-  --royal-gold: #D4AF37;
-  --night-black: #0C0C0C;
-  --smart-gray: #E6E6E6;
-  --sand-white: #F9F9F6;
-
-  --round: 16px;
-  --shadow: 0 4px 18px rgba(0,0,0,0.08);
+/* خلفية عامة */
+body, .stApp {
+    background: #f6f9f7 !important;
+    font-family: "Cairo", sans-serif !important;
 }
 
-body {
-  background: linear-gradient(135deg, var(--sand-white), var(--smart-gray));
-  font-family: 'Segoe UI', sans-serif;
+/* أزرار */
+.stButton>button {
+    background: linear-gradient(90deg, #006C35, #00994C);
+    color: white !important;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: 0.2s ease-in-out;
+}
+.stButton>button:hover {
+    background: linear-gradient(90deg, #004D24, #007A39);
+    transform: scale(1.02);
 }
 
-.hero-container {
-  background: var(--saudi-green);
-  padding: 40px;
-  border-radius: var(--round);
-  text-align: center;
-  color: white;
-  box-shadow: var(--shadow);
-  border: 2px solid var(--royal-gold);
-}
-
-.section-card {
-  background: rgba(255,255,255,0.75);
-  backdrop-filter: blur(12px);
-  border-radius: var(--round);
-  padding: 22px;
-  box-shadow: var(--shadow);
-  margin-bottom: 18px;
-  transition: 0.25s ease;
-}
-
-.section-card:hover {
-  transform: translateY(-3px);
-  border: 1px solid var(--saudi-green);
-}
-
+/* تنسيق العناوين */
 h1, h2, h3 {
-  color: var(--night-black);
+    color: #004D24 !important;
+    font-weight: 800 !important;
 }
 
-.highlight {
-  color: var(--royal-gold);
-  font-weight: bold;
+/* البطاقات */
+.h-card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    border: 1px solid #e3e3e3;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.h-card:hover {
+    border-color: #006C35;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.10);
+}
+
+/* تلميحات */
+.stAlert {
+    border-radius: 10px !important;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: #004D24;
+}
+
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+.sidebar-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #D4AF37;
+    margin-bottom: 15px;
+}
+
+/* جداول */
+.dataframe tbody tr:hover {
+    background-color: #e8f5e9;
 }
