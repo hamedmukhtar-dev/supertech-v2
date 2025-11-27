@@ -5,10 +5,8 @@ from datetime import datetime
 from typing import Optional, Tuple
 import streamlit as st
 
-try:
-    from passlib.hash import bcrypt
-except Exception:
-    bcrypt = None  # fallback إذا passlib غير متاح
+# نستخدم bcrypt_sha256 لتفادي حد 72 بايت ومشاكل بايثون 3.13
+from passlib.hash import bcrypt_sha256, pbkdf2_sha256
 
 DB_PATH_DEFAULT = "humain_lifestyle.db"
 
@@ -56,18 +54,23 @@ def _audit(action: str, user_email: Optional[str] = None, meta: str = ""):
         )
         c.commit()
 
+# ------------------ التهشير والتحقق ------------------
 def _hash_pw(pw: str) -> str:
-    if bcrypt:
-        return bcrypt.hash(pw)
-    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+    # آمن + لا يتأثر بحد 72 بايت
+    return bcrypt_sha256.hash(pw)
 
 def _verify_pw(pw: str, hashed: str) -> bool:
-    if bcrypt:
-        try:
-            return bcrypt.verify(pw, hashed)
-        except Exception:
-            return False
-    return hmac.compare_digest(hashlib.sha256(pw.encode("utf-8")).hexdigest(), hashed)
+    # دعم إعادة التوافق: لو كان هاش قديم PBKDF2 نقبله
+    try:
+        if hashed.startswith("$bcrypt-sha256$") or hashed.startswith("$2"):
+            if bcrypt_sha256.verify(pw, hashed):
+                return True
+    except Exception:
+        pass
+    try:
+        return pbkdf2_sha256.verify(pw, hashed)
+    except Exception:
+        return False
 
 def create_user(email: str, password: str, role: str = "user"):
     with _conn(DB_PATH_DEFAULT) as c:
@@ -105,14 +108,14 @@ def set_lang(lang: str):
 def t(ar: str, en: str) -> str:
     return ar if get_lang() == "ar" else en
 
-# -------- البوابة (تسجيل الدخول + اختيار اللغة) --------
+# -------- تهيئة حسابات افتراضية --------
 def setup_defaults():
-    # الجداول + حسابات الديمو + حسابك
     ensure_auth_tables(DB_PATH_DEFAULT)
     create_user("admin@demo.local", "admin123", role="admin")
     create_user("demo@demo.local", "demo123", role="demo")
     create_user("hamed.mukhtar@daral-sd.com", os.getenv("DEFAULT_USER_PASSWORD", "Daral@2025"), role="admin")
 
+# -------- بوابة الدخول + اختيار اللغة --------
 def login_gate() -> bool:
     st.sidebar.markdown("### 🌐 Language | اللغة")
     lang = st.sidebar.selectbox(
@@ -140,6 +143,18 @@ def login_gate() -> bool:
                 st.error(t("بيانات الدخول غير صحيحة.", "Invalid credentials."))
                 _audit("login_failed", email, "bad_credentials")
                 return False
+
+            # ترقية الهاش تلقائيًا لو قديم (إعادة تهشير)
+            try:
+                if not u[2].startswith("$bcrypt-sha256$"):
+                    with _conn(DB_PATH_DEFAULT) as c:
+                        cur = c.cursor()
+                        cur.execute("UPDATE users SET password_hash=? WHERE email=?",
+                                    (_hash_pw(pw), email.lower().strip()))
+                        c.commit()
+            except Exception:
+                pass
+
             st.session_state["AUTH_EMAIL"] = u[1]
             st.session_state["AUTH_ROLE"] = u[3]
             touch_last_login(u[1])
