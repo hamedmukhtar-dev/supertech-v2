@@ -9,7 +9,6 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from layout_header import render_header  # الهيدر + الشعار
-# بوابة الدخول واللغة + سجل التدقيق
 from auth_i18n import login_gate, signout_button, setup_defaults, track_page_view, t
 
 # ==============================
@@ -24,7 +23,7 @@ setup_defaults()
 if not login_gate():
     st.stop()
 
-DB_PATH = "humain_lifestyle.db"
+DB_PATH = os.getenv("DB_PATH", "humain_lifestyle.db")
 
 @contextmanager
 def get_conn():
@@ -392,7 +391,30 @@ def ai_general_chat(prompt: str) -> str:
 # ==============================
 # 5) واجهات الصفحات
 # ==============================
+def footer_company():
+    st.markdown("---")
+    st.markdown(
+        """
+<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+  <div style="display:flex;gap:10px;align-items:center;">
+    <img src="assets/logo.png" alt="Company Logo" style="height:36px;border-radius:8px;border:1px solid #D4AF37;padding:3px;background:white" />
+    <div>
+      <div style="font-weight:700;">Dar AL Khartoum Travel And Tourism CO LTD</div>
+      <div style="opacity:.9;">شركة دار الخرطوم للسفر والسياحة المحدودة</div>
+    </div>
+  </div>
+  <div style="line-height:1.3;font-size:14px;">
+    <div>hamed mukhtar — <a href="mailto:hamed.mukhtar@daral-sd.com">hamed.mukhtar@daral-sd.com</a></div>
+    <div>web: <a href="https://www.daral-sd.com" target="_blank">www.daral-sd.com</a></div>
+    <div>Tel: +20 111 333 6672 — WhatsApp: +249 912 399 919</div>
+  </div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def page_home():
+    track_page_view("Home")
     render_header()
     st.title("🌍 HUMAIN Lifestyle")
     st.caption("your gateway to KSA — منصّة ذكية تربط بين الزائر، المعتمر، والمستثمر")
@@ -438,8 +460,10 @@ def page_home():
 - 📥 **Booking Requests (Admin)**, 🏨 **Hotels & Contracts (Admin)**
 - 🤖 **AI Assistant**
 """)
+    footer_company()
 
 def page_trip_planner():
+    track_page_view("TripPlanner")
     render_header()
     st.title("🧭 Trip Planner (B2C) — مخطِّط رحلة ذكي")
     st.write("أدخل تفضيلاتك ودع المنصّة تقترح خطة رحلة متكاملة داخل السعودية.")
@@ -495,8 +519,10 @@ def page_trip_planner():
 
         st.markdown("---")
         st.caption("هذه خطة تجريبية (Demo).")
+    footer_company()
 
 def page_activities():
+    track_page_view("Activities")
     render_header()
     st.title("🎟️ Experiences & Activities — الأنشطة والتجارب")
     st.write("كتالوج تجريبي لأنشطة داخل مدن السعودية.")
@@ -517,7 +543,7 @@ def page_activities():
     df = list_activities(city_filter, category_filter)
     if df.empty:
         st.info("لا توجد أنشطة مطابقة.")
-        return
+        footer_company(); return
 
     st.markdown("---")
     st.subheader("الأنشطة المتاحة")
@@ -526,19 +552,25 @@ def page_activities():
             st.write(row["description"])
             c1, c2, c3 = st.columns([2,1,1])
             with c1:
-                st.write(f"💰 السعر التقريبي: **{row['approx_price_usd']:.0f} USD**" if row["approx_price_usd"] else "💰 غير محدد")
+                if row["approx_price_usd"]:
+                    st.write(f"💰 السعر التقريبي: **{row['approx_price_usd']:.0f} USD**")
+                else:
+                    st.write("💰 غير محدد")
             with c2:
                 if row["provider"]: st.write(f"🤝 المزوّد: {row['provider']}")
             with c3:
                 if row["booking_link"]: st.link_button("رابط حجز (تجريبي)", row["booking_link"])
+    footer_company()
 
 def page_itineraries():
+    track_page_view("Itineraries")
     render_header()
     st.title("📝 Saved Itineraries — خطط الرحلات المحفوظة")
     df = list_itineraries()
     if df.empty:
         st.info("لا توجد خطط محفوظة. جرّب Trip Planner.")
-        return
+        footer_company(); return
+
     st.subheader("القائمة")
     st.dataframe(df, use_container_width=True, hide_index=True)
 
@@ -553,8 +585,7 @@ def page_itineraries():
         if selected_id:
             details = get_itinerary(selected_id)
             if not details:
-                st.error("تعذر تحميل التفاصيل.")
-                return
+                st.error("تعذر تحميل التفاصيل."); footer_company(); return
             st.markdown("### التفاصيل")
             st.write(f"👤: {details.get('traveller_name') or 'غير محدد'}")
             st.write(f"📧: {details.get('traveller_email') or 'غير محدد'}")
@@ -566,11 +597,13 @@ def page_itineraries():
             st.markdown("---")
             st.markdown("### نص الخطة:")
             st.write(details.get("plan_text") or "")
+    footer_company()
 
 def page_packages():
+    track_page_view("Packages")
     render_header()
     st.title("📦 Packages / Programs — برامج جاهزة للبيع")
-    st.write("حوّل خطط الرحلات إلى برامج (Packages) تحتوي على مدينة/فندق/أنشطة/سعر.")
+    st.write("حوّل خطط الرحلات إلى برامج (Packages).")
 
     tab_create, tab_list = st.tabs(["إنشاء برنامج جديد","قائمة البرامج"])
 
@@ -626,7 +659,7 @@ def page_packages():
 
                 pkg_status = st.selectbox("الحالة", ["Draft","Active"])
                 pkg_notes = st.text_area("ملاحظات")
-                st.markdown("#### خطة الرحلة المرتبطة (للمراجعة)")
+                st.markdown("#### الخطة المرتبطة (للمراجعة)")
                 st.code(default_plan_text or "لا توجد خطة.", language="markdown")
                 submitted_pkg = st.form_submit_button("💾 حفظ البرنامج")
 
@@ -646,7 +679,8 @@ def page_packages():
         packages_df = list_packages()
         if packages_df.empty:
             st.info("لا توجد برامج محفوظة بعد.")
-            return
+            footer_company(); return
+
         st.dataframe(packages_df, use_container_width=True, hide_index=True)
         st.markdown("---")
         labels, id_map = [], {}
@@ -657,7 +691,7 @@ def page_packages():
         if selected_pkg_label:
             details = get_package(id_map[selected_pkg_label])
             if not details:
-                st.error("تعذر تحميل تفاصيل البرنامج."); return
+                st.error("تعذر تحميل تفاصيل البرنامج."); footer_company(); return
             st.markdown("### تفاصيل البرنامج")
             st.write(f"📦 {details.get('name')}")
             st.write(f"📍 {details.get('city') or 'غير محددة'}")
@@ -688,8 +722,10 @@ def page_packages():
             st.markdown("---")
             st.markdown("#### الخطة التفصيلية")
             st.write(details.get("ai_plan_text") or "لا توجد خطة.")
+    footer_company()
 
 def page_booking_requests():
+    track_page_view("BookingRequests")
     render_header()
     st.title("📥 Booking Requests (Admin) — طلبات الحجز")
     st.write("تسجيل ومراجعة طلبات الحجز (Leads).")
@@ -743,7 +779,7 @@ def page_booking_requests():
         st.subheader("القائمة")
         df = list_booking_requests()
         if df.empty:
-            st.info("لا توجد طلبات بعد."); return
+            st.info("لا توجد طلبات بعد."); footer_company(); return
         c1, c2 = st.columns(2)
         with c1:
             source_filter = st.selectbox("فلتر المصدر", ["الكل"] + sorted(df["source"].dropna().unique().tolist()))
@@ -753,8 +789,10 @@ def page_booking_requests():
         if source_filter != "الكل": df_f = df_f[df_f["source"]==source_filter]
         if status_filter != "الكل": df_f = df_f[df_f["status"]==status_filter]
         st.dataframe(df_f, use_container_width=True, hide_index=True)
+    footer_company()
 
 def page_hotels_admin():
+    track_page_view("HotelsContracts")
     render_header()
     st.title("🏨 Hotels & Contracts (Admin Demo)")
     st.write("إدارة الفنادق والعقود (Back-office).")
@@ -788,7 +826,7 @@ def page_hotels_admin():
 
         st.markdown("---"); st.subheader("قائمة الفنادق")
         hotels_df = list_hotels()
-        if hotels_df.empty: st.info("لا توجد فنادق."); 
+        if hotels_df.empty: st.info("لا توجد فنادق.")
         else: st.dataframe(hotels_df, use_container_width=True)
 
     with tab2:
@@ -823,13 +861,14 @@ def page_hotels_admin():
                                  cancellation_policy.strip(), notes.strip())
                     st.success("✅ تم الحفظ.")
                     st.experimental_rerun()
-
         st.markdown("---"); st.subheader("قائمة العقود")
         contracts_df = list_contracts()
         if contracts_df.empty: st.info("لا توجد عقود.")
         else: st.dataframe(contracts_df, use_container_width=True)
+    footer_company()
 
 def page_ai_assistant():
+    track_page_view("AI_Assistant")
     render_header()
     st.title("🤖 AI Assistant — HUMAIN Lifestyle")
     st.write("اسأل المساعد عن التخطيط وفكرة المنصة.")
@@ -840,10 +879,13 @@ def page_ai_assistant():
         else:
             with st.spinner("جاري التوليد..."):
                 ans = ai_general_chat(user_prompt.strip())
-            st.markdown("### ✍️ الرد:"); st.write(ans)
+            st.markdown("### ✍️ الرد:")
+            st.write(ans)
     st.caption("متصل حالياً بـ OpenAI لأغراض العرض.")
+    footer_company()
 
 def page_flights():
+    track_page_view("Flights")
     render_header()
     st.title("✈️ Flights to KSA — طلب حجز طيران")
     st.write("نموذج لتجميع طلبات الطيران (Lead Capture).")
@@ -875,13 +917,18 @@ def page_flights():
             st.error("اسم العميل ورقم الهاتف مطلوبان.")
         else:
             full_to_city = f"{to_city} - {trip_type}, {passengers} pax, {travel_class}, {depart_date}"
-            if trip_type == "ذهاب وعودة": full_to_city += f" / عودة: {return_date}"
-            add_booking_request(traveller_name.strip(), traveller_email.strip(), traveller_phone.strip(),
-                                from_city.strip(), full_to_city, 0, float(approx_budget),
-                                f\"[Flights Request] {notes or ''}\", "New", "Flights", None, None)
+            if trip_type == "ذهاب وعودة":
+                full_to_city += f" / عودة: {return_date}"
+            add_booking_request(
+                traveller_name.strip(), traveller_email.strip(), traveller_phone.strip(),
+                from_city.strip(), full_to_city, 0, float(approx_budget),
+                f"[Flights Request] {notes or ''}", "New", "Flights", None, None
+            )
             st.success("✅ تم استلام الطلب وسيتم التواصل معك.")
+    footer_company()
 
 def page_rail():
+    track_page_view("Rail")
     render_header()
     st.title("🚄 Saudi Rail — طلب حجز قطار")
     st.write("تجميع طلبات رحلات القطار داخل المملكة.")
@@ -910,12 +957,16 @@ def page_rail():
             st.error("اسم العميل ورقم الهاتف مطلوبان.")
         else:
             full_to_city = f"{from_station} → {to_station}, {passengers} pax, {seat_class}, {travel_date}"
-            add_booking_request(traveller_name.strip(), traveller_email.strip(), traveller_phone.strip(),
-                                from_station, full_to_city, 0, float(approx_budget),
-                                f\"[Rail Request] {notes or ''}\", "New", "Rail", None, None)
+            add_booking_request(
+                traveller_name.strip(), traveller_email.strip(), traveller_phone.strip(),
+                from_station, full_to_city, 0, float(approx_budget),
+                f"[Rail Request] {notes or ''}", "New", "Rail", None, None
+            )
             st.success("✅ تم استلام الطلب.")
+    footer_company()
 
 def page_umrah():
+    track_page_view("Umrah")
     render_header()
     st.title("🕋 Umrah & Hajj — طلب برنامج عمرة/حج")
     st.write("تجميع طلبات برامج العمرة (تمهيداً للتكامل لاحقاً).")
@@ -946,12 +997,16 @@ def page_umrah():
         else:
             total_nights = int(nights_makkah + nights_madina)
             to_city = f"{program_type} via {entry_city}, nights: Makkah {nights_makkah}, Madina {nights_madina}, guests {total_guests}"
-            add_booking_request(traveller_name.strip(), traveller_email.strip(), traveller_phone.strip(),
-                                from_city.strip(), to_city, total_nights, float(approx_budget),
-                                f\"[Umrah/Hajj Request] {hotel_pref}. {notes or ''}\", "New", "Umrah/Hajj", None, None)
+            add_booking_request(
+                traveller_name.strip(), traveller_email.strip(), traveller_phone.strip(),
+                from_city.strip(), to_city, total_nights, float(approx_budget),
+                f"[Umrah/Hajj Request] {hotel_pref}. {notes or ''}", "New", "Umrah/Hajj", None, None
+            )
             st.success("✅ تم استلام الطلب.")
+    footer_company()
 
 def page_investor_gateway():
+    track_page_view("InvestorGateway")
     render_header()
     st.title("💼 Invest in KSA — بوابة المستثمرين")
     st.write("بوابة موحدة للمستثمرين (تأسيس/مكاتب/شقق/بنوك/استقدام).")
@@ -984,12 +1039,16 @@ def page_investor_gateway():
             services_str = ", ".join(services) if services else "لم يحدد"
             to_city = f"Invest in {target_city}, profile={profile_type}, horizon={time_horizon}"
             full_notes = f"[Investor Request] Company={company_name or 'N/A'}, Services={services_str}. {notes or ''}"
-            add_booking_request(contact_name.strip(), contact_email.strip(), contact_phone.strip(),
-                                "Investor Origin (N/A)", to_city, 0, float(investment_budget),
-                                full_notes, "New", "Investor", None, None)
+            add_booking_request(
+                contact_name.strip(), contact_email.strip(), contact_phone.strip(),
+                "Investor Origin (N/A)", to_city, 0, float(investment_budget),
+                full_notes, "New", "Investor", None, None
+            )
             st.success("✅ تم استلام طلب المستثمر.")
+    footer_company()
 
 def page_lifestyle():
+    track_page_view("Lifestyle")
     render_header()
     st.title("🏙️ Local Lifestyle & Services — نمط الحياة والخدمات")
     st.write("طلب خدمات الحياة اليومية داخل المملكة.")
@@ -1021,11 +1080,15 @@ def page_lifestyle():
         else:
             services_str = ", ".join(service_categories) if service_categories else "لم يحدد"
             to_city = f"Lifestyle in {city} | Services: {services_str} | Urgency: {urgency}"
-            add_booking_request(name.strip(), email.strip(), phone.strip(), current_city.strip(), to_city, 0, float(approx_budget),
-                                f\"[Lifestyle Request] {details or ''}\", "New", "Lifestyle", None, None)
+            add_booking_request(
+                name.strip(), email.strip(), phone.strip(), current_city.strip(), to_city, 0, float(approx_budget),
+                f"[Lifestyle Request] {details or ''}", "New", "Lifestyle", None, None
+            )
             st.success("✅ تم استلام الطلب.")
+    footer_company()
 
 def page_health_insurance():
+    track_page_view("HealthInsurance")
     render_header()
     st.title("🩺 Health & Insurance — الصحة والتأمين")
     st.write("تجميع طلبات التأمين/الصحة.")
@@ -1046,21 +1109,25 @@ def page_health_insurance():
         c3, c4 = st.columns(2)
         with c3:
             name = st.text_input("الاسم *")
-            email = st.text_input("البريد الإلكتروني *")
         with c4:
-            phone = st.text_input("رقم الهاتف *")
-            current_country = st.text_input("الدولة/المدينة الحالية", value="Sudan / Egypt")
+            email = st.text_input("البريد الإلكتروني *")
+        phone = st.text_input("رقم الهاتف *")
+        current_country = st.text_input("الدولة/المدينة الحالية", value="Sudan / Egypt")
         submitted = st.form_submit_button("📩 إرسال الطلب")
     if submitted:
         if not name.strip() or not email.strip() or not phone.strip():
             st.error("الاسم، البريد، الهاتف مطلوبة.")
         else:
             to_city = f"{request_type} in {target_city}, coverage={coverage_for}, start={time_frame}"
-            add_booking_request(name.strip(), email.strip(), phone.strip(), current_country.strip(), to_city, 0, float(approx_budget),
-                                f\"[Health/Insurance Request] {details or ''}\", "New", "Health/Insurance", None, None)
+            add_booking_request(
+                name.strip(), email.strip(), phone.strip(), current_country.strip(), to_city, 0, float(approx_budget),
+                f"[Health/Insurance Request] {details or ''}", "New", "Health/Insurance", None, None
+            )
             st.success("✅ تم استلام الطلب.")
+    footer_company()
 
 def page_education_jobs():
+    track_page_view("EducationJobs")
     render_header()
     st.title("🎓 Education & Jobs — التعليم وفرص العمل")
     st.write("قبول جامعي/كورسات/وظائف داخل السعودية.")
@@ -1091,9 +1158,12 @@ def page_education_jobs():
             st.error("الاسم، البريد، الهاتف مطلوبة.")
         else:
             to_city = f"{request_type} in {target_city}, level={level}, field={field or 'N/A'}"
-            add_booking_request(name.strip(), email.strip(), phone.strip(), current_country.strip(), to_city, 0, float(approx_budget),
-                                f\"[Education/Jobs Request] {details or ''}\", "New", "Education/Jobs", None, None)
+            add_booking_request(
+                name.strip(), email.strip(), phone.strip(), current_country.strip(), to_city, 0, float(approx_budget),
+                f"[Education/Jobs Request] {details or ''}", "New", "Education/Jobs", None, None
+            )
             st.success("✅ تم استلام الطلب.")
+    footer_company()
 
 # ==============================
 # 6) توجيه الصفحات + صلاحيات + خروج + تتبّع
