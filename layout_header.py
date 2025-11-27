@@ -1,47 +1,50 @@
+# layout_header.py
+import base64
+from pathlib import Path
 import streamlit as st
 
+def _logo_b64():
+    p = Path("assets/logo.png")
+    if p.exists():
+        try:
+            return base64.b64encode(p.read_bytes()).decode("utf-8")
+        except Exception:
+            return None
+    return None
+
 def render_header():
-    header_style = """
-        <style>
-            .humain-header {
-                background:linear-gradient(90deg,#006C35,#004D24);
-                color:white;
-                text-align:center;
-                padding:25px;
-                border-bottom:4px solid #D4AF37;
-                box-shadow:0 4px 15px rgba(0,0,0,0.18);
-                border-radius:0 0 14px 14px;
-            }
-            .humain-header h1 {
-                font-size:2.2rem;
-                font-weight:800;
-                margin:0;
-            }
-            .humain-header p {
-                font-size:1rem;
-                opacity:.95;
-            }
-        </style>
-    """
-
-    st.markdown(header_style, unsafe_allow_html=True)
-
+    b64 = _logo_b64()
     st.markdown(
         """
-        <div class="humain-header">
-            <h1>🌍 HUMAIN Lifestyle</h1>
-            <p>Your Gateway to The Kingdom of Saudi Arabia 🇸🇦</p>
+<style>
+.hdr{
+  background:linear-gradient(90deg,#006C35,#004D24);
+  color:white; padding:18px 16px; border-bottom:4px solid #D4AF37;
+  border-radius:0 0 14px 14px; box-shadow:0 4px 15px rgba(0,0,0,.18);
+}
+.hdr-wrap{ display:flex; gap:12px; align-items:center; }
+.hdr h1{ margin:0; font-size:1.6rem; font-weight:900; letter-spacing:.3px; }
+.hdr p{ margin:4px 0 0; opacity:.95; }
+.hdr-logo{
+  height:44px; width:44px; border-radius:10px; border:1px solid #D4AF37;
+  background:white; overflow:hidden; display:flex; align-items:center; justify-content:center;
+}
+</style>
+        """,
+        unsafe_allow_html=True
+    )
+    st.markdown('<div class="hdr"><div class="hdr-wrap">', unsafe_allow_html=True)
+    if b64:
+        st.markdown(f'<div class="hdr-logo"><img src="data:image/png;base64,{b64}" style="height:100%;width:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="hdr-logo"><span style="color:#333;">Logo</span></div>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div>
+          <h1>HUMAIN Lifestyle</h1>
+          <p>Your Gateway to The Kingdom of Saudi Arabia 🇸🇦</p>
         </div>
         """,
-        unsafe_allow_html=True,
+        unsafe_allow_html=True
     )
-    # --- Company badge (logo + names) ---
-    company_html = """
-    <div style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px;">
-        <img src="assets/logo.png" alt="Company Logo" style="height:40px;border-radius:8px;border:1px solid #D4AF37;padding:4px;background:white" />
-        <div style="line-height:1.2">
-            <div style="font-weight:800;">Dar AL Khartoum Travel And Tourism CO LTD</div>
-            <div style="opacity:.9;">شركة دار الخرطوم للسفر والسياحة المحدودة</div>
-        </div>
-    </div>
-    """
+    st.markdown('</div></div>', unsafe_allow_html=True)
