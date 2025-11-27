@@ -290,3 +290,8 @@ def signout_button():
 
 def track_page_view(page_name: str):
     _audit("page_view", st.session_state.get("AUTH_EMAIL"), page_name)
+# ====== Show full auth UI with layout wrapper ======
+def show_auth_ui() -> bool:
+    st.set_page_config(page_title="HUMAIN Lifestyle | Auth", layout="centered")
+    setup_defaults()
+    return login_gate()
