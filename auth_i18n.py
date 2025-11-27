@@ -295,3 +295,8 @@ def show_auth_ui() -> bool:
     st.set_page_config(page_title="HUMAIN Lifestyle | Auth", layout="centered")
     setup_defaults()
     return login_gate()
+# ====== Show full auth UI with layout wrapper ======
+def show_auth_ui() -> bool:
+    st.set_page_config(page_title="HUMAIN Lifestyle | Auth", layout="centered")
+    setup_defaults()
+    return login_gate()
