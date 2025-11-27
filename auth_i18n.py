@@ -1,16 +1,15 @@
-# auth_i18n.py — Landing + Auth + i18n + Audit (final)
+# auth_i18n.py — Polished Landing + Auth + i18n + Audit (no changes to your pages)
 import os, sqlite3, hashlib, hmac
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Optional, Tuple
 import streamlit as st
 
-# ---------- Hashing (fix 72-byte issue) ----------
+# ---------- Optional bcrypt (auto-fallback) ----------
 try:
-    # يدعم كلمات مرور أطول من 72 بايت
-    from passlib.hash import bcrypt_sha256 as _bcrypt
+    from passlib.hash import bcrypt
 except Exception:
-    _bcrypt = None  # سنسقط إلى sha256 إذا لم تتوفر passlib
+    bcrypt = None  # fallback if backend missing
 
 DB_PATH_DEFAULT = "humain_lifestyle.db"
 
@@ -50,28 +49,47 @@ def _now() -> str:
     return datetime.utcnow().isoformat()
 
 def _audit(action: str, user_email: Optional[str] = None, meta: str = ""):
-    with _conn(DB_PATH_DEFAULT) as c:
-        cur = c.cursor()
-        cur.execute(
-            "INSERT INTO audit_logs(created_at, user_email, action, meta) VALUES(?,?,?,?)",
-            (_now(), user_email, action, meta)
-        )
-        c.commit()
+    try:
+        with _conn(DB_PATH_DEFAULT) as c:
+            cur = c.cursor()
+            cur.execute(
+                "INSERT INTO audit_logs(created_at, user_email, action, meta) VALUES(?,?,?,?)",
+                (_now(), user_email, action, meta)
+            )
+            c.commit()
+    except Exception:
+        pass  # لا توقف الواجهة لو اللوج فشل
 
-def _hash_pw(pw: str) -> str:
-    # يفضَّل bcrypt_sha256، وإلا يسقط إلى sha256 (لأغراض الديمو فقط)
-    if _bcrypt:
-        return _bcrypt.hash(pw)
+# --- hashing helpers ---
+def _sha256(pw: str) -> str:
     return hashlib.sha256(pw.encode("utf-8")).hexdigest()
 
-def _verify_pw(pw: str, hashed: str) -> bool:
-    if _bcrypt:
+def _hash_pw(pw: str) -> str:
+    """
+    استخدم bcrypt إن كان متاحاً (آمن)، وإلا SHA-256 كحل تجريبي.
+    نتجنب أخطاء backends في بعض الاستضافات.
+    """
+    if bcrypt:
         try:
-            return _bcrypt.verify(pw, hashed)
+            # bcrypt له حد 72 بايت: نقطع بأمان لو كلمة السر طويلة جداً
+            if len(pw.encode("utf-8")) > 72:
+                pw = pw[:72]
+            return bcrypt.hash(pw)
+        except Exception:
+            # fallback silent
+            return _sha256(pw)
+    return _sha256(pw)
+
+def _verify_pw(pw: str, hashed: str) -> bool:
+    if bcrypt and hashed.startswith("$2"):
+        try:
+            if len(pw.encode("utf-8")) > 72:
+                pw = pw[:72]
+            return bcrypt.verify(pw, hashed)
         except Exception:
             return False
-    # Fallback: sha256
-    return hmac.compare_digest(hashlib.sha256(pw.encode("utf-8")).hexdigest(), hashed)
+    # sha256 fallback
+    return hmac.compare_digest(_sha256(pw), hashed)
 
 def create_user(email: str, password: str, role: str = "user"):
     with _conn(DB_PATH_DEFAULT) as c:
@@ -97,7 +115,7 @@ def touch_last_login(email: str):
         cur.execute("UPDATE users SET last_login_at=? WHERE email=?", (_now(), email.lower().strip()))
         c.commit()
 
-# ---------- i18n ----------
+# -------- i18n --------
 LANGS = {"ar": "العربية", "en": "English"}
 
 def get_lang() -> str:
@@ -109,112 +127,212 @@ def set_lang(lang: str):
 def t(ar: str, en: str) -> str:
     return ar if get_lang() == "ar" else en
 
-# ---------- Seed / Defaults ----------
+# -------- Defaults (demo accounts) --------
 def setup_defaults():
     ensure_auth_tables(DB_PATH_DEFAULT)
-    # حسابات ديمو سريعة + حسابك
+    # كلمات مرور قصيرة لتفادي 72 بايت
     create_user("admin@demo.local", "admin123", role="admin")
     create_user("demo@demo.local", "demo123", role="demo")
-    create_user("hamed.mukhtar@daral-sd.com",
-                os.getenv("DEFAULT_USER_PASSWORD", "Daral@2025"),
-                role="admin")
+    create_user("hamed.mukhtar@daral-sd.com", os.getenv("DEFAULT_USER_PASSWORD", "Daral2025"), role="admin")
 
-# ---------- Landing + Login Gate ----------
-def login_gate() -> bool:
-    """
-    يظهر صفحة هبوط تحتوي:
-      - شعار + اسم المنصة والشركة
-      - حقوق الملكية + تحذير قانوني
-      - اختيار اللغة
-      - تبويبات دخول/إنشاء حساب
-    ولا يسمح بمتابعة التطبيق قبل تسجيل الدخول.
-    """
+# -------- Landing + Auth Gate (beautiful layout) --------
 
-    # (1) رأس الصفحة: الشعار + اسم المنصة/الشركة
-    st.markdown(
-        """
-        <div style="display:flex;gap:16px;align-items:center;justify-content:center;margin-top:10px;flex-wrap:wrap;">
-            <img src="assets/logo.png" alt="Logo" style="height:60px;border-radius:10px;border:1px solid #D4AF37;padding:6px;background:white" />
-            <div style="line-height:1.25;text-align:center">
-                <div style="font-weight:800;font-size:22px;">HUMAIN Lifestyle — Live Demo</div>
-                <div style="opacity:.95;">Dar AL Khartoum Travel And Tourism CO LTD</div>
-                <div style="opacity:.95;">شركة دار الخرطوم للسفر والسياحة المحدودة</div>
-            </div>
+_LANDING_CSS = """
+<style>
+  :root{
+    --bg:#0b1220;
+    --card:#10192e;
+    --muted:#93a1b1;
+    --gold:#D4AF37;
+    --accent:#1f6feb;
+  }
+  .hl-wrap{
+    min-height: 100vh;
+    background: radial-gradient(1200px 600px at 80% -10%, rgba(32,77,204,.25), transparent 60%),
+                radial-gradient(1200px 600px at 10% 110%, rgba(212,175,55,.20), transparent 60%),
+                var(--bg);
+    color: #e6edf3;
+    display:flex;align-items:center;justify-content:center;padding: 24px;
+  }
+  .hl-card{
+    width:min(980px, 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.08);
+    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+    border-radius: 18px;
+    overflow:hidden;
+  }
+  .hl-top{
+    padding: 26px 26px 20px 26px;
+    background: linear-gradient(90deg, rgba(0,108,53,.25), rgba(0,77,36,.25));
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .hl-brand{
+    display:flex;gap:14px;align-items:center;
+  }
+  .hl-brand img{
+    width:48px;height:48px;border-radius:12px;background:#fff;border:2px solid var(--gold);padding:4px;object-fit:contain;
+  }
+  .hl-title{font-weight:800;font-size:22px;margin:0;letter-spacing:.2px}
+  .hl-sub{opacity:.9;margin-top:2px;font-size:13px}
+  .hl-legal{
+    padding:16px 26px;color:var(--muted);font-size:12px;border-top:1px dashed rgba(255,255,255,.08);
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00));
+  }
+  .hl-grid{display:grid;grid-template-columns: 1.2fr 1fr;gap:0;border-top:1px solid rgba(255,255,255,.06)}
+  @media (max-width:860px){ .hl-grid{grid-template-columns: 1fr} }
+  .hl-pane{padding:28px}
+  .hl-pane + .hl-pane{border-left:1px solid rgba(255,255,255,.06)}
+  .hl-pane h3{margin:0 0 14px 0;font-size:16px;color:#eaeef2}
+  .hl-locale{
+    display:flex;flex-direction:column;gap:12px
+  }
+  .hl-locale .hint{font-size:12px;color:var(--muted)}
+  .hl-footer{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    padding:16px 26px;border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.15)
+  }
+  .hl-copy{font-size:12px;color:var(--muted)}
+  .hl-org{display:flex;gap:10px;align-items:center}
+  .hl-org img{height:28px;border-radius:8px;background:#fff;border:1px solid var(--gold);padding:3px;object-fit:contain}
+  .hl-badge{line-height:1.2}
+</style>
+"""
+
+def _logo_tag() -> str:
+    # استخدم ملفك إن وُجد؛ وإلا إيموجي افتراضي
+    logo_path = "assets/logo.png"
+    if os.path.exists(logo_path):
+        return '<img src="assets/logo.png" alt="logo" />'
+    return '<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;border:2px solid #D4AF37;color:#0b1220;font-weight:900">HL</div>'
+
+def _dir_attr() -> str:
+    return 'dir="rtl"' if get_lang() == "ar" else 'dir="ltr"'
+
+def _header_block():
+    st.markdown(_LANDING_CSS, unsafe_allow_html=True)
+    st.markdown(f"""
+<div class="hl-wrap" {_dir_attr()}>
+  <div class="hl-card">
+    <div class="hl-top">
+      <div class="hl-brand">
+        {_logo_tag()}
+        <div>
+          <div class="hl-title">HUMAIN Lifestyle — Live Demo</div>
+          <div class="hl-sub">Dar AL Khartoum Travel And Tourism CO LTD · شركة دار الخرطوم للسفر والسياحة المحدودة</div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+      </div>
+    </div>
+""", unsafe_allow_html=True)
 
-    st.markdown("---")
+def _legal_block():
+    st.markdown(f"""
+    <div class="hl-legal">
+      <div>{t("© 2025 HUMAIN Lifestyle — جميع الحقوق محفوظة.",
+               "© 2025 HUMAIN Lifestyle — All rights reserved.")}</div>
+      <div style="margin-top:6px">
+        {t("هذا نموذج عرض حي (Demo) لأغراض الاختبار والتقييم فقط. البيانات المعروضة تجريبية وقد لا تعكس أسعار/توفّر حقيقي. باستخدامك لهذه المنصة فأنت تقرّ بمسؤوليتك عن صحة البيانات المدخلة وقبولك لشروط الاستخدام وسياسة الخصوصية.",
+           "This is a live demo for testing and evaluation. Data shown is sample and may not reflect real prices/availability. By using this platform you accept the Terms of Use and Privacy Policy.")}
+      </div>
+    </div>
+""", unsafe_allow_html=True)
 
-    # (2) حقوق الملكية + تحذير قانوني مختصر
-    st.markdown(
-        f"""
-<div style="font-size:13px;line-height:1.5;opacity:.9;padding:10px 12px;background:#f7f7f9;border:1px solid #eee;border-radius:10px;">
-  <b>© 2025 HUMAIN Lifestyle</b> — {t("جميع الحقوق محفوظة.","All rights reserved.")}<br/>
-  {t(
-    "هذا نموذج عرض حي (Demo) لأغراض الاختبار والتقييم فقط. البيانات المعروضة تجريبية وقد لا تعكس أسعار/توفّر حقيقي. باستخدامك لهذه المنصة فأنت تقرّ بمسؤوليتك عن صحة البيانات المدخلة وقبولك لشروط الاستخدام وسياسة الخصوصية.",
-    "This is a live demo intended for testing and evaluation only. Displayed data is sample and may not reflect real availability/prices. By using this platform you accept responsibility for the submitted information and agree to the Terms of Use and Privacy Policy."
-  )}
+def _footer_block():
+    st.markdown(f"""
+    <div class="hl-footer">
+      <div class="hl-org">
+        {_logo_tag()}
+        <div class="hl-badge">
+          <div style="font-weight:700">Dar AL Khartoum Travel And Tourism CO LTD</div>
+          <div style="opacity:.9">{t("شركة دار الخرطوم للسفر والسياحة المحدودة", "Dar Al Khartoum Travel & Tourism Co. Ltd.")}</div>
+        </div>
+      </div>
+      <div class="hl-copy">
+        {t("الهُويّة والعلامة محفوظة. الاستخدام الداخلي/العرضي فقط.", "Branding © reserved. Internal/demo use only.")}
+      </div>
+    </div>
+  </div>
 </div>
-        """,
-        unsafe_allow_html=True,
+""", unsafe_allow_html=True)
+
+def _language_pane():
+    st.markdown('<div class="hl-grid"><div class="hl-pane">', unsafe_allow_html=True)
+    st.markdown(f"<h3>🌐 {t('اللغة','Language')}</h3>", unsafe_allow_html=True)
+    current = get_lang()
+    # نستخدم عناصر Streamlit القياسية (ستظهر داخل البطاقة)
+    lang = st.selectbox(
+        t("اختر اللغة", "Choose language"),
+        options=list(LANGS.keys()),
+        index=0 if current == "ar" else 1,
+        format_func=lambda k: LANGS[k],
+        key="lang_select_gate",
     )
+    if lang != current:
+        set_lang(lang)
+        st.experimental_rerun()
 
-    # (3) اختيار اللغة داخل نفس الصفحة
-    st.markdown("### 🌐 " + t("اللغة","Language"))
-    set_lang(
-        st.selectbox(
-            "Language",
-            options=list(LANGS.keys()),
-            format_func=lambda k: LANGS[k],
-            index=0 if get_lang() == "ar" else 1,
-        )
-    )
+    st.caption(t("اضبط اللغة أولاً ثم تابع تسجيل الدخول.",
+                 "Pick a language first, then continue to sign in."))
+    st.markdown('<div class="hint">' + t("يمكنك تغيير اللغة لاحقًا من الشريط الجانبي.",
+                                         "You can change language later from the sidebar.") + '</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # إذا كان المستخدم مصادَق مسبقاً
-    if st.session_state.get("AUTH_EMAIL"):
-        return True
+def _auth_pane():
+    st.markdown('<div class="hl-pane">', unsafe_allow_html=True)
+    st.markdown(f"<h3>🔐 {t('تسجيل الدخول','Sign in')}</h3>", unsafe_allow_html=True)
 
-    # (4) تبويبات الدخول/إنشاء حساب — تظهر تحت اللغة مباشرة
-    st.markdown("---")
-    st.subheader(t("تسجيل الدخول","Sign in"))
+    tab_login, tab_signup = st.tabs([t("دخول","Login"), t("إنشاء حساب","Create account")])
 
-    tabs = st.tabs([t("دخول","Login"), t("إنشاء حساب","Create account")])
-
-    with tabs[0]:
-        email = st.text_input(t("البريد الإلكتروني","Email"), key="login_email")
-        pw = st.text_input(t("كلمة المرور","Password"), type="password", key="login_pw")
-        if st.button(t("دخول","Login"), type="primary"):
+    with tab_login:
+        email = st.text_input(t("البريد الإلكتروني", "Email"), key="login_email")
+        pw = st.text_input(t("كلمة المرور", "Password"), type="password", key="login_pw")
+        if st.button(t("دخول","Login"), type="primary", use_container_width=True):
             u = get_user(email)
             if not u or not _verify_pw(pw, u[2]):
-                st.error(t("بيانات الدخول غير صحيحة.","Invalid credentials."))
-                _audit("login_failed", email, "bad_credentials")
-                return False
+                st.error(t("بيانات الدخول غير صحيحة.", "Invalid credentials."))
+                _audit("login_failed", email, "bad_credentials"); return
             st.session_state["AUTH_EMAIL"] = u[1]
             st.session_state["AUTH_ROLE"]  = u[3]
             touch_last_login(u[1])
             _audit("login_success", u[1], f"role={u[3]}")
             st.experimental_rerun()
 
-    with tabs[1]:
-        n_email = st.text_input(t("البريد الإلكتروني","Email"), key="new_email")
-        n_pw    = st.text_input(t("كلمة المرور","Password"), type="password", key="new_pw")
-        n_pw2   = st.text_input(t("تأكيد كلمة المرور","Confirm password"), type="password", key="new_pw2")
-        if st.button(t("إنشاء الحساب","Create account")):
+    with tab_signup:
+        n_email = st.text_input(t("البريد الإلكتروني", "Email"), key="new_email")
+        n_pw = st.text_input(t("كلمة المرور", "Password"), type="password", key="new_pw")
+        n_pw2 = st.text_input(t("تأكيد كلمة المرور", "Confirm password"), type="password", key="new_pw2")
+        if st.button(t("إنشاء الحساب","Create account"), use_container_width=True):
             if not n_email or not n_pw:
-                st.error(t("رجاءً املأ كل الحقول.","Please fill all fields."))
+                st.error(t("رجاءً املأ كل الحقول.", "Please fill all fields."))
             elif n_pw != n_pw2:
-                st.error(t("كلمتا المرور غير متطابقتين.","Passwords do not match."))
+                st.error(t("كلمتا المرور غير متطابقتين.", "Passwords do not match."))
             elif get_user(n_email):
-                st.error(t("الحساب موجود بالفعل.","Account already exists."))
+                st.error(t("الحساب موجود بالفعل.", "Account already exists."))
             else:
                 create_user(n_email, n_pw, role="user")
                 _audit("signup", n_email, "")
-                st.success(t("تم إنشاء الحساب. الرجاء تسجيل الدخول.","Account created. Please sign in."))
+                st.success(t("تم إنشاء الحساب. الرجاء تسجيل الدخول.", "Account created. Please sign in."))
 
-    # إذا لم يُسجّل الدخول، نوقف التدفق هنا
+    st.markdown('</div></div>', unsafe_allow_html=True)  # close pane + grid
+
+def login_gate() -> bool:
+    """
+    تُستدعى في أعلى streamlit_app.py.
+    لو المستخدم غير مسجل، نعرض شاشة الهبوط المرتّبة ونوقف بقية الصفحات.
+    """
+    if st.session_state.get("AUTH_EMAIL"):
+        return True
+
+    # رسم الهبوط
+    _header_block()
+    _language_pane()
+    _auth_pane()
+    _legal_block()
+    _footer_block()
+
+    # إيقاف التطبيق لحين تسجيل الدخول
     st.stop()
+    return False
 
 def signout_button():
     if st.sidebar.button("🔓 " + t("تسجيل خروج", "Sign out")):
