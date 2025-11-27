@@ -1,4 +1,4 @@
-# auth_i18n.py — Light Login + Language Gateway
+# auth_i18n.py — Light Login + Language Gateway + Auto-Provision
 import os, sqlite3, hashlib, hmac, base64
 from contextlib import contextmanager
 from datetime import datetime
@@ -7,6 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 DB_PATH_DEFAULT = "humain_lifestyle.db"
+ALLOW_ANY_LOGIN = os.getenv("ALLOW_ANY_LOGIN", "0") == "1"  # إذا =1 يقبل أي باسورد (للعرض فقط)
 
 @contextmanager
 def _conn(db_path: str):
@@ -56,9 +57,9 @@ def _audit(action: str, user_email: Optional[str] = None, meta: str = ""):
 
 # ====== Password hashing (SHA-256 ديمو) ======
 def _hash_pw(pw: str) -> str:
-    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+    return hashlib.sha256((pw or "").encode("utf-8")).hexdigest()
 def _verify_pw(pw: str, hashed: str) -> bool:
-    return hmac.compare_digest(hashlib.sha256(pw.encode("utf-8")).hexdigest(), hashed)
+    return hmac.compare_digest(_hash_pw(pw), hashed)
 
 def create_user(email: str, password: str, role: str = "user"):
     with _conn(DB_PATH_DEFAULT) as c:
@@ -67,6 +68,21 @@ def create_user(email: str, password: str, role: str = "user"):
             "INSERT OR IGNORE INTO users(email, password_hash, role, created_at) VALUES(?,?,?,?)",
             (email.lower().strip(), _hash_pw(password), role, _now())
         )
+        c.commit()
+
+def upsert_user(email: str, password: str, role: str = "user"):
+    """إنشاء أو تحديث كلمة المرور لو الحساب موجود (للديمو)."""
+    with _conn(DB_PATH_DEFAULT) as c:
+        cur = c.cursor()
+        cur.execute("SELECT id FROM users WHERE email=?",(email.lower().strip(),))
+        row = cur.fetchone()
+        if row:
+            cur.execute("UPDATE users SET password_hash=? WHERE email=?", (_hash_pw(password), email.lower().strip()))
+        else:
+            cur.execute(
+                "INSERT INTO users(email, password_hash, role, created_at) VALUES(?,?,?,?)",
+                (email.lower().strip(), _hash_pw(password), role, _now())
+            )
         c.commit()
 
 def get_user(email: str) -> Optional[Tuple[int, str, str, str, str, str]]:
@@ -93,6 +109,7 @@ def t(ar: str, en: str) -> str: return ar if get_lang() == "ar" else en
 # ====== Seed ======
 def setup_defaults():
     ensure_auth_tables(DB_PATH_DEFAULT)
+    # حسابات ديمو
     create_user("admin@demo.local", os.getenv("ADMIN_DEMO_PW", "admin123"), role="admin")
     create_user("demo@demo.local", os.getenv("DEMO_DEMO_PW", "demo123"), role="demo")
     create_user("hamed.mukhtar@daral-sd.com", os.getenv("DEFAULT_USER_PASSWORD", "Daral@2025"), role="admin")
@@ -108,34 +125,30 @@ def _read_logo_as_base64():
     return None
 
 def _login_css():
-    # نسخة فاتحة (Light), خط واضح, تباين مريح
+    # نسخة Light بيضاء بالكامل + خط واضح
     st.markdown(
         """
 <style>
 :root{
-  --gold:#C8A646; --green:#0D7A45; --bg:#f7f8fb; --card:#ffffff; --text:#101418; --muted:#677181; --border:#E6E8EF;
+  --gold:#C8A646; --green:#0D7A45; --bg:#ffffff; --card:#ffffff; --text:#101418; --muted:#677181; --border:#E6E8EF;
 }
 html, body, .stApp { background: var(--bg) !important; color: var(--text) !important; }
 * { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Kufi Arabic", "Cairo", Arial, "Apple Color Emoji", "Segoe UI Emoji" !important; }
-.humain-wrap{
-  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px;
-  background: radial-gradient(1200px 600px at 10% 10%, rgba(13,122,69,.06), transparent),
-              radial-gradient(900px 500px at 90% 15%, rgba(200,166,70,.08), transparent);
-}
+.humain-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px; background:#fff; }
 .humain-card{
   width:min(980px,94vw); background: var(--card);
   border:1px solid var(--border);
   box-shadow: 0 20px 50px rgba(16,20,24,.06);
   border-radius:18px; padding:22px 22px 16px;
 }
-.h-header{ display:flex; align-items:center; gap:16px; padding:8px 4px 16px; border-bottom:1px dashed #e8e6da;}
+.h-header{ display:flex; align-items:center; gap:16px; padding:8px 4px 16px; border-bottom:1px dashed #e8e6da; }
 .h-logo{ height:58px; width:58px; border-radius:12px; border:1px solid var(--gold); background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center;}
 .h-title h1{ margin:0; font-size:1.6rem; color:#1a1f2a; font-weight:800; letter-spacing:.2px;}
 .h-title p{ margin:4px 0 0; color:var(--muted); font-size:.98rem;}
 .h-body{ display:grid; gap:18px; grid-template-columns:1.05fr .95fr; padding-top:18px;}
 .h-left{ padding-right:12px;}
 .h-legal{
-  border:1px solid var(--border); background:linear-gradient(180deg, #fff, #fcfdfc);
+  border:1px solid var(--border); background:linear-gradient(180deg, #ffffff, #fcfcfd);
   border-radius:12px; padding:14px; color:#273142; font-size:.98rem;
 }
 .h-legal strong{ color:#1a1f2a; }
@@ -179,8 +192,42 @@ def signout_button():
 def track_page_view(page_name: str):
     _audit("page_view", st.session_state.get("AUTH_EMAIL"), page_name)
 
+def _do_login(email: str, password: str):
+    """يسجّل الدخول حسب الإعداد:
+       - ALLOW_ANY_LOGIN=1: أي باسورد مقبول؛ ينشئ/يحدّث المستخدم ويدخّل فوراً.
+       - غير ذلك: لو المستخدم غير موجود → يُنشأ تلقائياً بالباسورد المرسل؛ لو موجود يتحقق من كلمة المرور."""
+    email = (email or "").strip().lower()
+    if not email:
+        return False, t("أدخل بريدك الإلكتروني.", "Please enter your email.")
+
+    if ALLOW_ANY_LOGIN:
+        # قبول فوري وإنشاء/تحديث الحساب (ديمو)
+        upsert_user(email, password or "demo", role="user")
+        u = get_user(email)
+        st.session_state["AUTH_EMAIL"] = u[1]
+        st.session_state["AUTH_ROLE"] = u[3]
+        touch_last_login(u[1])
+        _audit("login_success_any", u[1], "ALLOW_ANY_LOGIN=1")
+        return True, ""
+
+    u = get_user(email)
+    if not u:
+        # إنشاء تلقائي ثم دخول
+        create_user(email, password or "demo", role="user")
+        u = get_user(email)
+
+    # تحقق عادي
+    if not _verify_pw(password or "", u[2]):
+        _audit("login_failed", email, "bad_credentials")
+        return False, t("بيانات الدخول غير صحيحة.", "Invalid credentials.")
+    st.session_state["AUTH_EMAIL"] = u[1]
+    st.session_state["AUTH_ROLE"] = u[3]
+    touch_last_login(u[1])
+    _audit("login_success", u[1], f"role={u[3]}")
+    return True, ""
+
 def login_gate() -> bool:
-    # لو المستخدم مسجل، اسمح بمتابعة التطبيق
+    # إذا مسجّل خلاص
     if st.session_state.get("AUTH_EMAIL"):
         return True
 
@@ -242,16 +289,11 @@ def login_gate() -> bool:
             email = st.text_input(t("البريد الإلكتروني", "Email"), key="login_email")
             pw = st.text_input(t("كلمة المرور", "Password"), type="password", key="login_pw")
             if st.button(t("دخول", "Login"), type="primary"):
-                u = get_user(email)
-                if not u or not _verify_pw(pw, u[2]):
-                    st.error(t("بيانات الدخول غير صحيحة.", "Invalid credentials."))
-                    _audit("login_failed", email, "bad_credentials")
-                else:
-                    st.session_state["AUTH_EMAIL"] = u[1]
-                    st.session_state["AUTH_ROLE"] = u[3]
-                    touch_last_login(u[1])
-                    _audit("login_success", u[1], f"role={u[3]}")
+                ok, msg = _do_login(email, pw)
+                if ok:
                     st.experimental_rerun()
+                else:
+                    st.error(msg)
 
         with tabs[1]:
             n_email = st.text_input(t("البريد الإلكتروني", "Email"), key="new_email")
