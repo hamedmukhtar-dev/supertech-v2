@@ -93,7 +93,7 @@ def init_db():
         # خطط الرحلات
         cur.execute(
             """
-            CREATE TABLE IF NOT EXISTS itineraries (
+            CREATE TABLE IF NOT NOT EXISTS itineraries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 created_at TEXT NOT NULL,
                 traveller_name TEXT,
@@ -1418,7 +1418,19 @@ def page_booking_requests():
 
             source = st.selectbox(
                 "مصدر الطلب",
-                ["Web", "Mobile", "Agent", "Flights", "Rail", "Umrah/Hajj", "Investor", "Lifestyle", "Health/Insurance", "Education/Jobs", "Other"],
+                [
+                    "Web",
+                    "Mobile",
+                    "Agent",
+                    "Flights",
+                    "Rail",
+                    "Umrah/Hajj",
+                    "Investor",
+                    "Lifestyle",
+                    "Health/Insurance",
+                    "Education/Jobs",
+                    "Other",
+                ],
             )
             status = st.selectbox(
                 "حالة الطلب",
@@ -2240,10 +2252,28 @@ def page_education_jobs():
 
 
 # ==============================
-# 7) توجيه الصفحات
+# 7) توجيه الصفحات + HUMAIN AI Copilot
 # ==============================
 
 st.sidebar.title("HUMAIN Lifestyle 🌍")
+
+# 🤖 HUMAIN AI Copilot (Sidebar)
+with st.sidebar.expander("🤖 HUMAIN AI Copilot", expanded=False):
+    ai_prompt = st.text_area(
+        "اكتب سؤالك للمساعد الذكي",
+        key="sidebar_ai_prompt",
+        height=120,
+    )
+    if st.button("💬 اسأل HUMAIN AI", key="sidebar_ai_btn"):
+        if not ai_prompt.strip():
+            st.warning("اكتب سؤالك أولاً.")
+        else:
+            with st.spinner("جاري توليد رد HUMAIN AI..."):
+                answer = ai_general_chat(ai_prompt.strip())
+            st.markdown("**رد HUMAIN AI:**")
+            st.write(answer)
+
+# قائمة الصفحات
 page = st.sidebar.radio(
     "اختر الصفحة",
     [
@@ -2265,6 +2295,7 @@ page = st.sidebar.radio(
     ],
 )
 
+# توجيه الصفحات حسب الاختيار
 if page.startswith("🏠"):
     page_home()
 elif page.startswith("🧭"):
