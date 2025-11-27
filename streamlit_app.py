@@ -159,30 +159,12 @@ def init_db():
             """
         )
 
-        # الخدمات الحياتية المحلية (مطاعم، سوبرماركت، تعليم، صحة، الخ)
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS local_services (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                city TEXT NOT NULL,
-                name TEXT NOT NULL,
-                sector TEXT NOT NULL,      -- Food, Shopping, Education, Health, Sports, Community, Services
-                sub_type TEXT,
-                description TEXT,
-                address TEXT,
-                contact_phone TEXT,
-                website TEXT,
-                tags TEXT
-            );
-            """
-        )
-
         conn.commit()
 
         # لو ما في أنشطة، نضيف كتالوج أولي
         cur.execute("SELECT COUNT(*) FROM activities;")
-        count_acts = cur.fetchone()[0]
-        if count_acts == 0:
+        count = cur.fetchone()[0]
+        if count == 0:
             seed_activities = [
                 # Riyadh
                 (
@@ -429,163 +411,6 @@ def init_db():
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 seed_activities,
-            )
-            conn.commit()
-
-        # لو ما في خدمات حياتية، نضيف كتالوج أولي (مطاعم، سوبرماركت، تعليم، صحة...)
-        cur.execute("SELECT COUNT(*) FROM local_services;")
-        count_ls = cur.fetchone()[0]
-        if count_ls == 0:
-            seed_local_services = [
-                # Food & Cafes
-                (
-                    "Riyadh",
-                    "Najd Village Restaurant",
-                    "Food",
-                    "Saudi Restaurant",
-                    "مطعم يقدم الأكلات السعودية الشعبية في جو تراثي مناسب للعائلات والضيوف.",
-                    "حي العليا، الرياض",
-                    "+966-11-000-0000",
-                    "https://example.com/najd-village",
-                    "مطعم,سعودي,عائلي",
-                ),
-                (
-                    "Riyadh",
-                    "Specialty Coffee Hub",
-                    "Food",
-                    "Cafe",
-                    "كوفي شوب مختص يقدم قهوة مختصة وجلسات عمل واجتماع مع إنترنت سريع.",
-                    "حي الصحافة، الرياض",
-                    "+966-11-000-0001",
-                    "https://example.com/coffee-hub",
-                    "كوفي,قهوة مختصة,عمل",
-                ),
-                (
-                    "Jeddah",
-                    "Red Sea Seafood Market",
-                    "Food",
-                    "Seafood",
-                    "سوق ومطعم للمأكولات البحرية الطازجة على الواجهة البحرية.",
-                    "كورنيش جدة",
-                    "+966-12-000-0002",
-                    "https://example.com/redsea-seafood",
-                    "بحري,مطعم,عائلي",
-                ),
-
-                # Supermarkets & Shopping
-                (
-                    "Riyadh",
-                    "City Hypermarket",
-                    "Shopping",
-                    "Hypermarket",
-                    "هايبرماركت متكامل للمواد الغذائية والمنتجات المنزلية.",
-                    "طريق الملك فهد، الرياض",
-                    "+966-11-000-0003",
-                    "https://example.com/city-hyper",
-                    "سوبرماركت,مواد غذائية,منزلي",
-                ),
-                (
-                    "Jeddah",
-                    "Jeddah Mall",
-                    "Shopping",
-                    "Mall",
-                    "مجمع تجاري كبير يضم محلات ملابس، الكترونيات، مطاعم، ومناطق ترفيه.",
-                    "حي الأندلس، جدة",
-                    "+966-12-000-0004",
-                    "https://example.com/jeddah-mall",
-                    "مول,تسوق,ترفيه",
-                ),
-                (
-                    "Riyadh",
-                    "Office & Home Furniture Center",
-                    "Shopping",
-                    "Furniture",
-                    "معرض لقطع الأثاث المكتبي والمنزلي مع خيارات مختلفة للأسعار.",
-                    "المنطقة الصناعية، الرياض",
-                    "+966-11-000-0005",
-                    "https://example.com/furniture-center",
-                    "أثاث,مكتبي,منزلي",
-                ),
-
-                # Education & Courses
-                (
-                    "Riyadh",
-                    "Riyadh Language Institute",
-                    "Education",
-                    "Languages",
-                    "معهد لتعليم اللغات (إنجليزي، عربي لغير الناطقين، ولغات أخرى).",
-                    "حي الملك عبدالله، الرياض",
-                    "+966-11-000-0006",
-                    "https://example.com/riyadh-language",
-                    "تعليم,لغات,دورات",
-                ),
-                (
-                    "Jeddah",
-                    "Tech Skills Academy",
-                    "Education",
-                    "IT & Coding",
-                    "أكاديمية لتعليم البرمجة، التحول الرقمي، والمهارات التقنية للشباب.",
-                    "حي السلامة، جدة",
-                    "+966-12-000-0007",
-                    "https://example.com/tech-academy",
-                    "برمجة,تقنية,دورات",
-                ),
-
-                # Sports & Community
-                (
-                    "Riyadh",
-                    "Riyadh Sports Club",
-                    "Sports",
-                    "Gym & Fitness",
-                    "نادي رياضي متكامل مع أجهزة حديثة، حصص لياقة، ومدربين شخصيين.",
-                    "حي الياسمين، الرياض",
-                    "+966-11-000-0008",
-                    "https://example.com/riyadh-sports",
-                    "رياضة,نادي,لياقة",
-                ),
-                (
-                    "Jeddah",
-                    "Community Cultural Center",
-                    "Community",
-                    "Cultural Center",
-                    "مركز مجتمعي يقدم فعاليات ثقافية، ورش عمل، وأنشطة عائلية.",
-                    "حي الروضة، جدة",
-                    "+966-12-000-0009",
-                    "https://example.com/community-center",
-                    "مجتمعي,ثقافة,فعاليات",
-                ),
-
-                # Health & Clinics (مكمّلة لصفحة الصحة)
-                (
-                    "Riyadh",
-                    "Riyadh Specialized Clinic",
-                    "Health",
-                    "Clinic",
-                    "عيادة تخصصية تقدم استشارات طبية في عدة تخصصات.",
-                    "حي المروج، الرياض",
-                    "+966-11-000-0010",
-                    "https://example.com/riyadh-clinic",
-                    "عيادة,صحة,استشارات",
-                ),
-                (
-                    "Jeddah",
-                    "Jeddah General Hospital",
-                    "Health",
-                    "Hospital",
-                    "مستشفى عام يقدم خدمات طبية متكاملة مع طوارئ على مدار الساعة.",
-                    "شمال جدة",
-                    "+966-12-000-0011",
-                    "https://example.com/jeddah-hospital",
-                    "مستشفى,طوارئ,صحة",
-                ),
-            ]
-            cur.executemany(
-                """
-                INSERT INTO local_services
-                (city, name, sector, sub_type, description, address, contact_phone, website, tags)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                seed_local_services,
             )
             conn.commit()
 
@@ -970,38 +795,6 @@ def list_booking_requests() -> pd.DataFrame:
     return df
 
 
-def list_local_services(
-    city_filter: Optional[str] = None,
-    sector_filter: Optional[str] = None,
-    search: Optional[str] = None,
-) -> pd.DataFrame:
-    base_query = "SELECT * FROM local_services"
-    params: List[Any] = []
-    conditions: List[str] = []
-
-    if city_filter and city_filter != "الكل":
-        conditions.append("city = ?")
-        params.append(city_filter)
-
-    if sector_filter and sector_filter != "الكل":
-        conditions.append("sector = ?")
-        params.append(sector_filter)
-
-    if search and search.strip():
-        conditions.append("(name LIKE ? OR description LIKE ? OR tags LIKE ?)")
-        like_val = f"%{search.strip()}%"
-        params.extend([like_val, like_val, like_val])
-
-    if conditions:
-        base_query += " WHERE " + " AND ".join(conditions)
-
-    base_query += " ORDER BY city, sector, name"
-
-    with get_conn() as conn:
-        df = pd.read_sql_query(base_query, conn, params=params)
-    return df
-
-
 # ==============================
 # 4) تكامل OpenAI
 # ==============================
@@ -1078,7 +871,6 @@ def ai_general_chat(prompt: str) -> str:
 # 5) واجهات الصفحات
 # ==============================
 
-
 def page_home():
     render_header()
     st.title("🌍 HUMAIN Lifestyle")
@@ -1095,12 +887,11 @@ def page_home():
 - **Travel & Leisure**: تخطيط رحلات، أنشطة، برامج، وفنادق داخل السعودية.
 - **Umrah & Hajj**: طلب برامج عمرة/حج متكاملة (سكن + نقل + خدمات).
 - **Invest in KSA**: بوابة للمستثمرين وروّاد الأعمال لتأسيس مشاريعهم داخل المملكة.
-- **Local Lifestyle**: مطاعم، تسوق، تعليم، صحة، رياضة، وخدمات مجتمعية.
 
 المنصّة مصمَّمة بحيث:
 
 > المستخدم يدخل من HUMAIN Lifestyle  
-> ثم **نحن** نوزِّعه على أفضل مزوّدي الخدمات (طيران، قطار، فنادق، بنوك، منصّات رسمية، مزودي خدمات محليين) وفق الشراكات المستقبلية.
+> ثم **نحن** نوزِّعه على أفضل مزوّدي الخدمات (طيران، قطار، فنادق، بنوك، منصّات رسمية) وفق الشراكات المستقبلية.
 """
         )
 
@@ -1108,7 +899,7 @@ def page_home():
         st.info(
             "ℹ️ **Demo Mode — وضع العرض التجريبي**\n\n"
             "- البيانات الحالية تجريبية وليست مرتبطة بأنظمة حجز حقيقية.\n"
-            "- كل الطلبات (Flights, Rail, Umrah, Investor, Health, Local Services...) تُسجَّل في النظام كـ Leads.\n"
+            "- كل الطلبات (Flights, Rail, Umrah, Investor...) تُسجَّل في النظام كـ Leads.\n"
             "- البنية جاهزة للربط مع HUMAIN ONE، ALLAM، وموفّري خدمات في السعودية لاحقاً."
         )
 
@@ -1124,10 +915,9 @@ def page_home():
 - تخطيط رحلة إلى مدينة سعودية
 - اختيار أنشطة وتجارب
 - تجميع برنامج كامل (Package)
-- اكتشاف مطاعم، كافيهات، ومولات
 """
         )
-        st.markdown("**جرّب:**\n- 🧭 Trip Planner\n- 🎟️ Experiences\n- 🏙️ Local Lifestyle\n- 📦 Packages")
+        st.markdown("**جرّب:**\n- 🧭 Trip Planner\n- 🎟️ Experiences\n- 📦 Packages")
 
     with c2:
         st.markdown("#### 🕋 Pilgrims (Umrah & Hajj)")
@@ -1136,10 +926,9 @@ def page_home():
 - طلب برنامج عمرة أو عمرة + سياحة
 - سكن في مكة والمدينة
 - تنقّل، أنشطة دينية وترفيهية
-- دعم صحي وتأمين أثناء الإقامة
 """
         )
-        st.markdown("**جرّب:**\n- 🕋 Umrah & Hajj\n- ✈️ Flights to KSA\n- 🚄 Saudi Rail\n- 🏥 Health & Insurance")
+        st.markdown("**جرّب:**\n- 🕋 Umrah & Hajj\n- ✈️ Flights to KSA\n- 🚄 Saudi Rail")
 
     with c3:
         st.markdown("#### 💼 Investors & Business")
@@ -1147,11 +936,10 @@ def page_home():
             """
 - تأسيس شركة أو نشاط تجاري
 - مكاتب، شقق، بنوك، استشارات
-- التعرف على نمط الحياة في المدينة (تعليم، صحة، تسوق)
 - طلب موحّد لكل خدمات الاستثمار
 """
         )
-        st.markdown("**جرّب:**\n- 💼 Invest in KSA\n- 🏙️ Local Lifestyle\n- 📥 Booking Requests (Admin)")
+        st.markdown("**جرّب:**\n- 💼 Invest in KSA\n- 📥 Booking Requests (Admin)")
 
     st.markdown("---")
     st.markdown("### 🔗 أقسام المنصّة (اختصار)")
@@ -1160,12 +948,13 @@ def page_home():
         """
 - 🧭 **Trip Planner (B2C)** → ذكاء اصطناعي لتخطيط الرحلات وحفظ الخطط.  
 - 🎟️ **Experiences & Activities** → كتالوج أنشطة وتجارب داخل مدن المملكة.  
-- 🏙️ **Local Lifestyle & Services** → مطاعم، سوبرماركت، مولات، تعليم، صحة، رياضة، ومراكز مجتمعية.  
 - 📦 **Packages / Programs** → تحويل الخطط إلى منتجات جاهزة للبيع.  
 - ✈️ **Flights to KSA** & 🚄 **Saudi Rail** → تجميع طلبات السفر (Leads) للطيران والقطار.  
 - 🕋 **Umrah & Hajj** → بوابة برامج العمرة والحج، تمهيداً للتكامل مع منصات رسمية.  
-- 🏥 **Health & Insurance** → تجميع طلبات التأمين الصحي وحجوزات المستشفيات/العيادات.  
 - 💼 **Invest in KSA** → بوابة المستثمرين لتجميع كل طلباتهم في مكان واحد.  
+- 🏙️ **Local Lifestyle & Services** → الطلب على خدمات الحياة اليومية داخل المملكة.  
+- 🩺 **Health & Insurance** → بوابة طلب التأمين والعلاج والمستشفيات.  
+- 🎓 **Education & Jobs** → بوابة التعليم وفرص العمل داخل المملكة.  
 - 📥 **Booking Requests (Admin)** → شاشة الإدارة لمتابعة كل الـ Leads.  
 - 🏨 **Hotels & Contracts (Admin)** → إدارة الفنادق والعقود الخلفية (Back-office).  
 - 🤖 **AI Assistant** → مساعد ذكي مدمج داخل المنصّة.
@@ -1328,82 +1117,6 @@ def page_activities():
             with col3:
                 if row["booking_link"]:
                     st.link_button("رابط حجز (تجريبي)", row["booking_link"])
-
-
-def page_local_lifestyle():
-    render_header()
-    st.title("🏙️ Local Lifestyle & Services — نمط الحياة والخدمات المحلية")
-
-    st.write(
-        "اكتشف المطاعم، الكافيهات، السوبرماركت، المولات، المعاهد التعليمية، الأندية الرياضية، "
-        "والمراكز الصحية والمجتمعية في مدن مختلفة داخل المملكة."
-    )
-
-    with get_conn() as conn:
-        df_cities = pd.read_sql_query("SELECT DISTINCT city FROM local_services ORDER BY city;", conn)
-        df_sectors = pd.read_sql_query("SELECT DISTINCT sector FROM local_services ORDER BY sector;", conn)
-
-    city_options = ["الكل"] + df_cities["city"].tolist()
-    sector_options_map = {
-        "الكل": "الكل",
-        "Food": "Food (مطاعم وكافيهات)",
-        "Shopping": "Shopping (تسوق وسوبرماركت)",
-        "Education": "Education (تعليم ودورات)",
-        "Health": "Health (صحة وعيادات)",
-        "Sports": "Sports (نوادي ولياقة)",
-        "Community": "Community (مراكز مجتمعية)",
-        "Services": "Services (خدمات متنوعة)",
-    }
-
-    sector_keys = ["الكل"] + df_sectors["sector"].tolist()
-    readable_sectors = [sector_options_map.get(s, s) for s in sector_keys]
-
-    col1, col2, col3 = st.columns([1.2, 1.2, 1.5])
-    with col1:
-        city_filter = st.selectbox("المدينة", city_options)
-    with col2:
-        selected_sector_label = st.selectbox("قطاع الخدمة", readable_sectors)
-        # رجّعها لـ key الأصلي
-        sector_filter = None
-        for key, label in sector_options_map.items():
-            if label == selected_sector_label:
-                sector_filter = key
-                break
-    with col3:
-        search = st.text_input("بحث بالاسم / الوصف / التاغات", value="")
-
-    df = list_local_services(
-        city_filter=city_filter,
-        sector_filter=sector_filter,
-        search=search,
-    )
-
-    if df.empty:
-        st.info("لا توجد خدمات مطابقة للفلتر الحالي.")
-        return
-
-    st.markdown("---")
-    st.subheader("الخدمات المتاحة")
-
-    for _, row in df.iterrows():
-        sector_name = sector_options_map.get(row["sector"], row["sector"])
-        title = f"{row['name']} — {row['city']} ({sector_name})"
-        with st.expander(title):
-            if row["description"]:
-                st.write(row["description"])
-            if row["address"]:
-                st.write(f"📍 العنوان: {row['address']}")
-            col1, col2 = st.columns(2)
-            with col1:
-                if row["contact_phone"]:
-                    st.write(f"📞 هاتف: {row['contact_phone']}")
-                if row["sub_type"]:
-                    st.write(f"🔹 نوع الخدمة: {row['sub_type']}")
-            with col2:
-                if row["website"]:
-                    st.link_button("🌐 موقع / صفحة (تجريبي)", row["website"])
-                if row["tags"]:
-                    st.write(f"🏷️ تاغات: {row['tags']}")
 
 
 def page_itineraries():
@@ -1652,7 +1365,7 @@ def page_booking_requests():
     st.title("📥 Booking Requests (Admin) — طلبات الحجز")
 
     st.write(
-        "هنا يمكنك تسجيل ومراجعة طلبات الحجز (Leads) المرتبطة بالبرامج، الرحلات، العمرة، الطيران، القطار، الصحة، أو المستثمرين."
+        "هنا يمكنك تسجيل ومراجعة طلبات الحجز (Leads) المرتبطة بالبرامج، الرحلات، العمرة، الطيران، القطار، أو المستثمرين."
     )
 
     tab_new, tab_list = st.tabs(["طلب جديد يدوي", "قائمة الطلبات"])
@@ -1686,11 +1399,11 @@ def page_booking_requests():
                 traveller_email = st.text_input("البريد الإلكتروني (اختياري)")
                 traveller_phone = st.text_input("رقم الهاتف *")
             with col2:
-                from_city = st.text_input("مدينة/جهة الانطلاق", value="Cairo")
-                to_city = st.text_input("الوجهة / نوع الخدمة", value="Riyadh")
-                days = st.number_input("عدد الأيام (إن وجد)", min_value=0, max_value=60, value=0)
+                from_city = st.text_input("مدينة الانطلاق", value="Cairo")
+                to_city = st.text_input("الوجهة الرئيسية", value="Riyadh")
+                days = st.number_input("عدد الأيام", min_value=1, max_value=60, value=7)
                 budget = st.number_input(
-                    "الميزانية التقريبية (دولار)", min_value=0.0, max_value=100000.0,
+                    "الميزانية التقريبية (دولار)", min_value=100.0, max_value=100000.0,
                     value=2500.0, step=100.0
                 )
 
@@ -1705,7 +1418,7 @@ def page_booking_requests():
 
             source = st.selectbox(
                 "مصدر الطلب",
-                ["Web", "Mobile", "Agent", "Flights", "Rail", "Umrah/Hajj", "Investor", "Health/Insurance", "Local Service", "Other"],
+                ["Web", "Mobile", "Agent", "Flights", "Rail", "Umrah/Hajj", "Investor", "Lifestyle", "Health/Insurance", "Education/Jobs", "Other"],
             )
             status = st.selectbox(
                 "حالة الطلب",
@@ -2139,79 +1852,6 @@ def page_umrah():
             st.success("✅ تم استلام طلب برنامج العمرة/الحج، وسيتم التواصل معك عبر البيانات المسجّلة.")
 
 
-def page_health_insurance():
-    render_header()
-    st.title("🏥 Health & Insurance — الصحة والتأمين")
-
-    st.write(
-        "هذه الصفحة لتجميع طلبات الخدمات الصحية والتأمين الصحي داخل المملكة "
-        "(تأمين، مستشفيات، عيادات، فحوصات، واستشارات عن بعد)."
-    )
-
-    with st.form("health_form"):
-        service_type = st.selectbox(
-            "نوع الخدمة المطلوبة",
-            ["تأمين صحي", "حجز مستشفى", "حجز عيادة", "فحص دوري", "استشارة طبية عن بعد"],
-        )
-
-        col1, col2 = st.columns(2)
-        with col1:
-            city = st.selectbox(
-                "المدينة داخل المملكة",
-                ["Riyadh", "Jeddah", "Makkah", "Madina", "Dammam", "Al Khobar", "Abha", "Tabuk", "NEOM Region", "Other"],
-            )
-            guests = st.number_input("عدد الأشخاص المشمولين بالخدمة", min_value=1, max_value=50, value=1)
-        with col2:
-            approx_budget = st.number_input(
-                "الميزانية التقريبية (دولار، إن وجدت)",
-                min_value=0.0,
-                max_value=100000.0,
-                value=0.0,
-                step=50.0,
-            )
-            provider_pref = st.text_input("تفضيل مقدم خدمة (إن وجد)", value="")
-
-        st.markdown("### تفاصيل الحالة / الطلب")
-        details = st.text_area(
-            "اشرح بإيجاز ما تحتاجه",
-            help="مثال: تأمين لعائلة مكونة من 4 أفراد، أو حجز موعد مع طبيب قلب، أو فحص شامل، إلخ.",
-        )
-
-        st.markdown("### بيانات التواصل")
-        col3, col4 = st.columns(2)
-        with col3:
-            contact_name = st.text_input("اسم مقدم الطلب *")
-            contact_email = st.text_input("البريد الإلكتروني (اختياري)")
-        with col4:
-            contact_phone = st.text_input("رقم الهاتف * (مع كود الدولة)")
-            from_city = st.text_input("مدينة الإقامة الحالية", value="")
-
-        submitted = st.form_submit_button("📩 إرسال طلب صحي / تأمين")
-
-    if submitted:
-        if not contact_name.strip() or not contact_phone.strip():
-            st.error("اسم مقدم الطلب ورقم الهاتف مطلوبان.")
-        else:
-            full_to_city = f"{service_type} in {city}, people={guests}, provider_pref={provider_pref or 'N/A'}"
-            full_notes = f"[Health/Insurance Request] {details or ''}"
-
-            add_booking_request(
-                traveller_name=contact_name.strip(),
-                traveller_email=contact_email.strip(),
-                traveller_phone=contact_phone.strip(),
-                from_city=from_city.strip() or "N/A",
-                to_city=full_to_city,
-                days=0,
-                budget=float(approx_budget),
-                notes=full_notes,
-                status="New",
-                source="Health/Insurance",
-                package_id=None,
-                itinerary_id=None,
-            )
-            st.success("✅ تم استلام طلب الصحة/التأمين، وسيتم التواصل معكم عبر البيانات المسجّلة.")
-
-
 def page_investor_gateway():
     render_header()
     st.title("💼 Invest in KSA — بوابة المستثمرين")
@@ -2300,6 +1940,306 @@ def page_investor_gateway():
 
 
 # ==============================
+# 6) صفحات نمط الحياة، الصحة، التعليم/الوظائف
+# ==============================
+
+def page_lifestyle():
+    render_header()
+    st.title("🏙️ Local Lifestyle & Services — نمط الحياة والخدمات")
+
+    st.write(
+        "من هنا يقدر المستخدم يطلب أي خدمة يومية داخل المملكة: "
+        "سوبرماركت، عفش منزلي، كافيهات، مراكز رياضية، أنشطة للأطفال، صالونات، وغير ذلك."
+    )
+
+    with st.form("lifestyle_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            city = st.selectbox(
+                "في أي مدينة داخل المملكة تحتاج الخدمة؟",
+                [
+                    "Riyadh",
+                    "Jeddah",
+                    "Makkah",
+                    "Madina",
+                    "Dammam",
+                    "Al Khobar",
+                    "Abha",
+                    "Taif",
+                    "AlUla",
+                    "Tabuk",
+                    "NEOM Region",
+                    "Diriyah",
+                    "Other",
+                ],
+            )
+            service_categories = st.multiselect(
+                "نوع الخدمات المطلوبة",
+                [
+                    "سوبرماركت / هايبرماركت",
+                    "أثاث منزلي / مكتبي",
+                    "إلكترونيات وجوالات",
+                    "مطاعم وكافيهات",
+                    "صالات رياضية / نوادي",
+                    "أنشطة أطفال / ترفيه عائلي",
+                    "سيارات (تأجير / خدمات)",
+                    "خدمات تنظيف / صيانة منزلية",
+                    "صالونات وتجميل",
+                    "خدمات مجتمعية / أندية",
+                    "أخرى",
+                ],
+            )
+        with col2:
+            approx_budget = st.number_input(
+                "ميزانيتك التقريبية (ريال سعودي إن أمكن)",
+                min_value=0.0,
+                max_value=100000.0,
+                value=0.0,
+                step=100.0,
+            )
+            urgency = st.selectbox(
+                "متى تحتاج هذه الخدمات؟",
+                ["خلال أسبوع", "خلال شهر", "أنا فقط أستكشف الخيارات"],
+            )
+
+        details = st.text_area(
+            "اشرح احتياجك بالتفصيل",
+            help="مثال: أحتاج شقة مفروشة، أو تجهيز مكتب صغير، أو سوبرماركت قريب من الحي، أو نادي للأطفال...",
+        )
+
+        st.markdown("### بيانات التواصل")
+        col3, col4 = st.columns(2)
+        with col3:
+            name = st.text_input("اسمك *")
+            email = st.text_input("البريد الإلكتروني (اختياري)")
+        with col4:
+            phone = st.text_input("رقم الهاتف * (مع كود الدولة)")
+            current_city = st.text_input("مكانك الحالي", value="Cairo")
+
+        submitted = st.form_submit_button("📩 إرسال طلب نمط الحياة")
+
+    if submitted:
+        if not name.strip() or not phone.strip():
+            st.error("الاسم ورقم الهاتف مطلوبان.")
+        else:
+            services_str = ", ".join(service_categories) if service_categories else "لم يحدد"
+            to_city = f"Lifestyle in {city} | Services: {services_str} | Urgency: {urgency}"
+            notes = f"[Lifestyle Request] {details or ''}"
+
+            add_booking_request(
+                traveller_name=name.strip(),
+                traveller_email=email.strip(),
+                traveller_phone=phone.strip(),
+                from_city=current_city.strip(),
+                to_city=to_city,
+                days=0,
+                budget=float(approx_budget),
+                notes=notes,
+                status="New",
+                source="Lifestyle",
+                package_id=None,
+                itinerary_id=None,
+            )
+            st.success("✅ تم استلام طلبك لنمط الحياة داخل المملكة.")
+
+
+def page_health_insurance():
+    render_header()
+    st.title("🩺 Health & Insurance — الصحة والتأمين")
+
+    st.write(
+        "من هنا المستخدم يطلب تأمين صحي، تأمين سفر، أو حجز مستشفى/عيادة داخل المملكة."
+    )
+
+    with st.form("health_form"):
+        request_type = st.selectbox(
+            "نوع الطلب",
+            [
+                "تأمين صحي فردي",
+                "تأمين صحي عائلي",
+                "تأمين صحي لشركة / موظفين",
+                "تأمين سفر للسعودية",
+                "حجز مستشفى / عيادة",
+                "فحوصات شاملة (Check-up)",
+                "رأي طبي ثانٍ (Second Opinion)",
+            ],
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            target_city = st.selectbox(
+                "المدينة المستهدفة داخل المملكة",
+                [
+                    "Riyadh",
+                    "Jeddah",
+                    "Makkah",
+                    "Madina",
+                    "Dammam",
+                    "Al Khobar",
+                    "Abha",
+                    "Tabuk",
+                    "NEOM Region",
+                    "Any",
+                ],
+            )
+            coverage_for = st.selectbox(
+                "التغطية لـ",
+                ["فرد", "عائلة", "شركة / فريق عمل"],
+            )
+        with col2:
+            approx_budget = st.number_input(
+                "الميزانية التقريبية (دولار أو ريال)",
+                min_value=0.0,
+                max_value=100000.0,
+                value=1000.0,
+                step=100.0,
+            )
+            time_frame = st.selectbox(
+                "متى تريد بدء التغطية / الخدمة؟",
+                ["خلال شهر", "خلال 3 أشهر", "غير محدد"],
+            )
+
+        details = st.text_area(
+            "تفاصيل إضافية عن الاحتياج الطبي أو التأميني",
+            help="مثال: عدد أفراد العائلة، نوع التأمين المطلوب، تخصص طبي معين، مستشفيات مفضّلة...",
+        )
+
+        st.markdown("### بيانات التواصل")
+        col3, col4 = st.columns(2)
+        with col3:
+            name = st.text_input("الاسم *")
+            email = st.text_input("البريد الإلكتروني *")
+        with col4:
+            phone = st.text_input("رقم الهاتف * (مع كود الدولة)")
+            current_country = st.text_input("الدولة / المدينة الحالية", value="Sudan / Egypt")
+
+        submitted = st.form_submit_button("📩 إرسال طلب الصحة/التأمين")
+
+    if submitted:
+        if not name.strip() or not email.strip() or not phone.strip():
+            st.error("الاسم، البريد الإلكتروني، ورقم الهاتف مطلوبة.")
+        else:
+            to_city = f"{request_type} in {target_city}, coverage={coverage_for}, start={time_frame}"
+            notes = f"[Health/Insurance Request] {details or ''}"
+
+            add_booking_request(
+                traveller_name=name.strip(),
+                traveller_email=email.strip(),
+                traveller_phone=phone.strip(),
+                from_city=current_country.strip(),
+                to_city=to_city,
+                days=0,
+                budget=float(approx_budget),
+                notes=notes,
+                status="New",
+                source="Health/Insurance",
+                package_id=None,
+                itinerary_id=None,
+            )
+            st.success("✅ تم استلام طلب الصحة/التأمين، وسيتم التواصل معك بالخيارات المناسبة.")
+
+
+def page_education_jobs():
+    render_header()
+    st.title("🎓 Education & Jobs — التعليم وفرص العمل")
+
+    st.write(
+        "من هنا المستخدم يطلب مساعدة في القبول الجامعي، الكورسات، أو البحث عن فرص عمل داخل المملكة."
+    )
+
+    with st.form("edu_jobs_form"):
+        request_type = st.selectbox(
+            "نوع الطلب",
+            [
+                "قبول جامعي في السعودية",
+                "كورسات / دورات تدريبية",
+                "تعلم اللغة العربية / الإنجليزية",
+                "فرص عمل داخل السعودية",
+                "تدريب / Internship",
+                "منح دراسية / Scholarships",
+            ],
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            target_city = st.selectbox(
+                "المدينة أو أونلاين",
+                [
+                    "Riyadh",
+                    "Jeddah",
+                    "Makkah",
+                    "Madina",
+                    "Dammam",
+                    "Al Khobar",
+                    "Online / Remote",
+                    "Any",
+                ],
+            )
+            level = st.selectbox(
+                "المستوى الحالي",
+                [
+                    "خريج ثانوي",
+                    "طالب جامعي",
+                    "خريج جامعة",
+                    "خبرة 1-3 سنوات",
+                    "خبرة 3-7 سنوات",
+                    "خبرة أكثر من 7 سنوات",
+                ],
+            )
+        with col2:
+            field = st.text_input(
+                "التخصص أو المجال الرئيسي",
+                help="مثال: IT, Business, Engineering, Healthcare...",
+            )
+            approx_budget = st.number_input(
+                "الميزانية المتاحة للتعليم / الكورسات (إن وجدت)",
+                min_value=0.0,
+                max_value=50000.0,
+                value=0.0,
+                step=100.0,
+            )
+
+        details = st.text_area(
+            "تفاصيل إضافية",
+            help="مثال: الجامعات المفضلة، نوع الوظيفة، الراتب المتوقع، الكورسات المطلوبة...",
+        )
+
+        st.markdown("### بيانات التواصل")
+        col3, col4 = st.columns(2)
+        with col3:
+            name = st.text_input("الاسم *")
+            email = st.text_input("البريد الإلكتروني *")
+        with col4:
+            phone = st.text_input("رقم الهاتف * (مع كود الدولة)")
+            current_country = st.text_input("الدولة / المدينة الحالية", value="Sudan / Egypt")
+
+        submitted = st.form_submit_button("📩 إرسال طلب التعليم / الوظائف")
+
+    if submitted:
+        if not name.strip() or not email.strip() or not phone.strip():
+            st.error("الاسم، البريد الإلكتروني، ورقم الهاتف مطلوبة.")
+        else:
+            to_city = f"{request_type} in {target_city}, level={level}, field={field or 'N/A'}"
+            notes = f"[Education/Jobs Request] {details or ''}"
+
+            add_booking_request(
+                traveller_name=name.strip(),
+                traveller_email=email.strip(),
+                traveller_phone=phone.strip(),
+                from_city=current_country.strip(),
+                to_city=to_city,
+                days=0,
+                budget=float(approx_budget),
+                notes=notes,
+                status="New",
+                source="Education/Jobs",
+                package_id=None,
+                itinerary_id=None,
+            )
+            st.success("✅ تم استلام طلب التعليم/الوظائف، وسيتم التواصل معك بالفرص المناسبة.")
+
+
+# ==============================
 # 7) توجيه الصفحات
 # ==============================
 
@@ -2310,14 +2250,15 @@ page = st.sidebar.radio(
         "🏠 Home",
         "🧭 Trip Planner (B2C)",
         "🎟️ Experiences & Activities",
-        "🏙️ Local Lifestyle & Services",
         "📝 Saved Itineraries",
         "📦 Packages / Programs",
         "✈️ Flights to KSA",
         "🚄 Saudi Rail",
         "🕋 Umrah & Hajj",
-        "🏥 Health & Insurance",
         "💼 Invest in KSA",
+        "🏙️ Local Lifestyle & Services",
+        "🩺 Health & Insurance",
+        "🎓 Education & Jobs",
         "📥 Booking Requests (Admin)",
         "🏨 Hotels & Contracts (Admin)",
         "🤖 AI Assistant",
@@ -2330,8 +2271,6 @@ elif page.startswith("🧭"):
     page_trip_planner()
 elif page.startswith("🎟️"):
     page_activities()
-elif page.startswith("🏙️"):
-    page_local_lifestyle()
 elif page.startswith("📝"):
     page_itineraries()
 elif page.startswith("📦"):
@@ -2342,10 +2281,14 @@ elif page.startswith("🚄"):
     page_rail()
 elif page.startswith("🕋"):
     page_umrah()
-elif page.startswith("🏥"):
-    page_health_insurance()
 elif page.startswith("💼"):
     page_investor_gateway()
+elif page.startswith("🏙️"):
+    page_lifestyle()
+elif page.startswith("🩺"):
+    page_health_insurance()
+elif page.startswith("🎓"):
+    page_education_jobs()
 elif page.startswith("📥"):
     page_booking_requests()
 elif page.startswith("🏨"):
