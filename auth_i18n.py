@@ -5,10 +5,13 @@ from datetime import datetime
 from typing import Optional, Tuple
 import streamlit as st
 
-# نستخدم bcrypt_sha256 لتفادي حد 72 بايت ومشاكل بايثون 3.13
-from passlib.hash import bcrypt_sha256, pbkdf2_sha256
+# ====== اختيار خوارزمية هاش آمنة بدون قيود 72 بايت ======
+try:
+    from passlib.hash import pbkdf2_sha256
+except Exception:
+    pbkdf2_sha256 = None  # fallback إذا passlib غير متاح
 
-DB_PATH_DEFAULT = "humain_lifestyle.db"
+DB_PATH_DEFAULT = os.getenv("DB_PATH", "humain_lifestyle.db")
 
 @contextmanager
 def _conn(db_path: str):
@@ -46,31 +49,34 @@ def _now():
     return datetime.utcnow().isoformat()
 
 def _audit(action: str, user_email: Optional[str] = None, meta: str = ""):
-    with _conn(DB_PATH_DEFAULT) as c:
-        cur = c.cursor()
-        cur.execute(
-            "INSERT INTO audit_logs(created_at, user_email, action, meta) VALUES(?,?,?,?)",
-            (_now(), user_email, action, meta)
-        )
-        c.commit()
-
-# ------------------ التهشير والتحقق ------------------
-def _hash_pw(pw: str) -> str:
-    # آمن + لا يتأثر بحد 72 بايت
-    return bcrypt_sha256.hash(pw)
-
-def _verify_pw(pw: str, hashed: str) -> bool:
-    # دعم إعادة التوافق: لو كان هاش قديم PBKDF2 نقبله
     try:
-        if hashed.startswith("$bcrypt-sha256$") or hashed.startswith("$2"):
-            if bcrypt_sha256.verify(pw, hashed):
-                return True
+        with _conn(DB_PATH_DEFAULT) as c:
+            cur = c.cursor()
+            cur.execute(
+                "INSERT INTO audit_logs(created_at, user_email, action, meta) VALUES(?,?,?,?)",
+                (_now(), user_email, action, meta)
+            )
+            c.commit()
     except Exception:
         pass
-    try:
-        return pbkdf2_sha256.verify(pw, hashed)
-    except Exception:
-        return False
+
+# ====== هاش/تحقق كلمات المرور ======
+def _hash_pw(pw: str) -> str:
+    pw = (pw or "").strip()
+    if pbkdf2_sha256:
+        # قوي وآمن—بدون حد 72 بايت
+        return pbkdf2_sha256.hash(pw)
+    # fallback بسيط
+    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+
+def _verify_pw(pw: str, hashed: str) -> bool:
+    pw = (pw or "").strip()
+    if pbkdf2_sha256:
+        try:
+            return pbkdf2_sha256.verify(pw, hashed)
+        except Exception:
+            return False
+    return hmac.compare_digest(hashlib.sha256(pw.encode("utf-8")).hexdigest(), hashed)
 
 def create_user(email: str, password: str, role: str = "user"):
     with _conn(DB_PATH_DEFAULT) as c:
@@ -108,14 +114,14 @@ def set_lang(lang: str):
 def t(ar: str, en: str) -> str:
     return ar if get_lang() == "ar" else en
 
-# -------- تهيئة حسابات افتراضية --------
+# -------- البوابة (تسجيل الدخول + اختيار اللغة) --------
 def setup_defaults():
     ensure_auth_tables(DB_PATH_DEFAULT)
+    # حسابات ديمو + حسابك
     create_user("admin@demo.local", "admin123", role="admin")
     create_user("demo@demo.local", "demo123", role="demo")
     create_user("hamed.mukhtar@daral-sd.com", os.getenv("DEFAULT_USER_PASSWORD", "Daral@2025"), role="admin")
 
-# -------- بوابة الدخول + اختيار اللغة --------
 def login_gate() -> bool:
     st.sidebar.markdown("### 🌐 Language | اللغة")
     lang = st.sidebar.selectbox(
@@ -143,18 +149,6 @@ def login_gate() -> bool:
                 st.error(t("بيانات الدخول غير صحيحة.", "Invalid credentials."))
                 _audit("login_failed", email, "bad_credentials")
                 return False
-
-            # ترقية الهاش تلقائيًا لو قديم (إعادة تهشير)
-            try:
-                if not u[2].startswith("$bcrypt-sha256$"):
-                    with _conn(DB_PATH_DEFAULT) as c:
-                        cur = c.cursor()
-                        cur.execute("UPDATE users SET password_hash=? WHERE email=?",
-                                    (_hash_pw(pw), email.lower().strip()))
-                        c.commit()
-            except Exception:
-                pass
-
             st.session_state["AUTH_EMAIL"] = u[1]
             st.session_state["AUTH_ROLE"] = u[3]
             touch_last_login(u[1])
