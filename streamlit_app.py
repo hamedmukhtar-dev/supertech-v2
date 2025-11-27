@@ -1,5 +1,3 @@
-# streamlit_app.py — HUMAIN Lifestyle (Live Demo with Auth Gate + i18n)
-# نسخة كاملة للصق المباشر — تعمل مع auth_i18n.py المرسل لك
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -10,51 +8,91 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
-# ==============================
-# محاولـة استيراد الهيدر (مع fallback)
-# ==============================
-try:
-    from layout_header import render_header  # الهيدر + الشعار
-except Exception:
-    def render_header():
-        st.markdown(
-            """
-            <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
-              <div style="width:36px;height:36px;border-radius:10px;background:#fff;border:2px solid #D4AF37;color:#0b1220;display:flex;align-items:center;justify-content:center;font-weight:900">HL</div>
-              <div>
-                <div style="font-weight:800;font-size:18px">HUMAIN Lifestyle</div>
-                <div style="opacity:.8;font-size:12px">Live Demo</div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+from layout_header import render_header  # الهيدر الأخضر الذهبي
 
-# بوابة الدخول واللغة + سجل التدقيق
-from auth_i18n import (
-    setup_defaults,
-    login_gate,
-    signout_button,
-    track_page_view,
-    t
-)
+# ==============================
+# 0) إعداد جلسة الدخول (Login Demo)
+# ==============================
+
+USERS = {
+    "admin": {"password": "admin123", "role": "admin"},
+    "demo": {"password": "demo123", "role": "demo"},
+}
+
+
+def require_login():
+    """نموذج دخول بسيط لتمييز admin / demo في الـ Live Demo."""
+    if "auth_user" not in st.session_state:
+        st.session_state.auth_user = None
+        st.session_state.auth_role = None
+
+    if st.session_state.auth_user:
+        # المستخدم مسجّل دخول بالفعل
+        return
+
+    st.markdown("## 🔐 HUMAIN Lifestyle — Live Demo Login")
+    st.write(
+        "هذا نموذج دخول تجريبي لتمييز صلاحيات العرض بين **admin** و **demo**.\n\n"
+        "- جرّب: `admin` / `admin123` لرؤية كل الشاشات بما فيها لوحات الإدارة.\n"
+        "- أو: `demo` / `demo123` لرؤية الصفحات العامة فقط."
+    )
+
+    with st.form("login_form"):
+        username = st.text_input("اسم المستخدم", value="")
+        password = st.text_input("كلمة المرور", value="", type="password")
+        submitted = st.form_submit_button("دخول")
+
+    if submitted:
+        user = USERS.get(username.strip())
+        if user and user["password"] == password:
+            st.session_state.auth_user = username.strip()
+            st.session_state.auth_role = user["role"]
+            st.experimental_rerun()
+        else:
+            st.error("بيانات الدخول غير صحيحة. جرّب admin/admin123 أو demo/demo123.")
+    st.stop()
+
+
+def require_admin():
+    """حماية صفحات الأدمن داخل الـ Demo."""
+    role = st.session_state.get("auth_role")
+    if role != "admin":
+        st.warning("هذه الصفحة متاحة فقط لحساب **admin** في وضع العرض التجريبي.")
+        return False
+    return True
+
+
+def render_footer():
+    """فوتر قانوني + حقوق ملكية فكرية يظهر أسفل كل صفحة."""
+    st.markdown("---")
+    st.markdown(
+        """
+**Legal & IP Notice (Demo Only)**  
+
+- HUMAIN Lifestyle هو نموذج عرض تجريبي، لا يمثّل منصة رسمية لأي جهة حكومية أو تجارية في المملكة.  
+- جميع الأسماء والعلامات التجارية (مثل البنوك، شركات الاتصالات، شركات الطيران، الخدمات اللوجستية، المنصات الحكومية...) مملوكة لأصحابها، وتُذكر هنا كمثال مرجعي فقط.  
+- لا يوجد أي ادعاء شراكة، تمثيل رسمي، أو اعتماد من هذه الجهات ضمن هذا النموذج.  
+- أي تكاملات مستقبلية مع منصات رسمية (مثل أبشر، توكلنا، نسك، البنوك، شركات الطيران...) يجب أن تتم وفق أنظمتها، تراخيصها، وشروط الاستخدام الخاصة بها.  
+- يمنع نسخ هذا التصميم أو إعادة استخدامه تجارياً بدون إذن كتابي من مالك الفكرة.  
+
+© 2025 HUMAIN Lifestyle — All rights reserved.
+"""
+    )
 
 # ==============================
 # 1) إعداد عام للتطبيق
 # ==============================
-st.set_page_config(page_title="HUMAIN Lifestyle", page_icon="🌍", layout="wide")
-load_dotenv()
 
-# تفعيل الحسابات الافتراضية والجداول الخاصة بالمصادقة
-setup_defaults()
-# بوابة الدخول + اختيار اللغة (تظهر قبل أي محتوى)
-if not login_gate():
-    st.stop()
+st.set_page_config(
+    page_title="HUMAIN Lifestyle",
+    page_icon="🌍",
+    layout="wide",
+)
 
-# ==============================
-# 2) قاعدة البيانات (CRUD)
-# ==============================
+load_dotenv()  # قراءة OPENAI_API_KEY من .env (لو موجود)
+
 DB_PATH = "humain_lifestyle.db"
+
 
 @contextmanager
 def get_conn():
@@ -63,6 +101,7 @@ def get_conn():
         yield conn
     finally:
         conn.close()
+
 
 def init_db():
     with get_conn() as conn:
@@ -191,45 +230,248 @@ def init_db():
 
         conn.commit()
 
-        # Seed للأنشطة إن كانت فارغة
+        # لو ما في أنشطة، نضيف كتالوج أولي
         cur.execute("SELECT COUNT(*) FROM activities;")
-        if cur.fetchone()[0] == 0:
+        count = cur.fetchone()[0]
+        if count == 0:
             seed_activities = [
                 # Riyadh
-                ("Riyadh","Boulevard City Evening","Entertainment","زيارة بوليفارد سيتي مع مطاعم وعروض حية وتجارب ترفيهية مناسبة للعائلات والشباب.",150.0,"Riyadh Season Partner","https://example.com/riyadh-boulevard-city"),
-                ("Riyadh","Boulevard World Discovery","Entertainment","تجربة عوالم وثقافات مختلفة في منطقة ترفيهية ضخمة مع فعاليات وعروض موسمية.",180.0,"Riyadh Season Partner","https://example.com/riyadh-boulevard-world"),
-                ("Riyadh","Riyadh Desert Safari & Dunes","Adventure","رحلة سفاري في صحراء الرياض مع رمال، دبابات، وجلسة بدوية مع عشاء تقليدي.",220.0,"Desert Operator","https://example.com/riyadh-dunes"),
-                ("Riyadh","Riyadh Zoo Family Day","Family","يوم عائلي في حديقة الحيوانات مع أنشطة للأطفال ومناطق ألعاب ومطاعم.",90.0,"Family Operator","https://example.com/riyadh-zoo"),
-                ("Riyadh","CityWalk Riyadh Night","Leisure","جولة مسائية في CityWalk مع مطاعم وكافيهات وفعاليات موسمية مميزة.",110.0,"CityWalk Partner","https://example.com/riyadh-citywalk"),
+                (
+                    "Riyadh",
+                    "Boulevard City Evening",
+                    "Entertainment",
+                    "زيارة بوليفارد سيتي مع مطاعم وعروض حية وتجارب ترفيهية مناسبة للعائلات والشباب.",
+                    150.0,
+                    "Riyadh Season Partner",
+                    "https://example.com/riyadh-boulevard-city",
+                ),
+                (
+                    "Riyadh",
+                    "Boulevard World Discovery",
+                    "Entertainment",
+                    "تجربة عوالم وثقافات مختلفة في منطقة ترفيهية ضخمة مع فعاليات وعروض موسمية.",
+                    180.0,
+                    "Riyadh Season Partner",
+                    "https://example.com/riyadh-boulevard-world",
+                ),
+                (
+                    "Riyadh",
+                    "Riyadh Desert Safari & Dunes",
+                    "Adventure",
+                    "رحلة سفاري في صحراء الرياض مع رمال، دبابات، وجلسة بدوية مع عشاء تقليدي.",
+                    220.0,
+                    "Desert Operator",
+                    "https://example.com/riyadh-dunes",
+                ),
+                (
+                    "Riyadh",
+                    "Riyadh Zoo Family Day",
+                    "Family",
+                    "يوم عائلي في حديقة الحيوانات مع أنشطة للأطفال ومناطق ألعاب ومطاعم.",
+                    90.0,
+                    "Family Operator",
+                    "https://example.com/riyadh-zoo",
+                ),
+                (
+                    "Riyadh",
+                    "CityWalk Riyadh Night",
+                    "Leisure",
+                    "جولة مسائية في CityWalk مع مطاعم وكافيهات وفعاليات موسمية مميزة.",
+                    110.0,
+                    "CityWalk Partner",
+                    "https://example.com/riyadh-citywalk",
+                ),
+
                 # Jeddah
-                ("Jeddah","Jeddah Waterfront Evening Walk","Leisure","نزهة مسائية على واجهة جدة البحرية مع مطاعم بحرية وجلسات خارجية.",80.0,"Local Guide","https://example.com/jeddah-waterfront"),
-                ("Jeddah","Red Sea Boat Trip","Adventure","رحلة قارب في البحر الأحمر مع سباحة أو سنوركلينج وجلسة بحرية.",260.0,"Red Sea Operator","https://example.com/jeddah-redsea-boat"),
-                ("Jeddah","Historic Jeddah (Al Balad) Tour","Culture","جولة في جدة التاريخية مع زيارة البيوت القديمة والأسواق الشعبية.",130.0,"Heritage Guide","https://example.com/jeddah-albalad"),
+                (
+                    "Jeddah",
+                    "Jeddah Waterfront Evening Walk",
+                    "Leisure",
+                    "نزهة مسائية على واجهة جدة البحرية مع مطاعم بحرية وجلسات خارجية.",
+                    80.0,
+                    "Local Guide",
+                    "https://example.com/jeddah-waterfront",
+                ),
+                (
+                    "Jeddah",
+                    "Red Sea Boat Trip",
+                    "Adventure",
+                    "رحلة قارب في البحر الأحمر مع سباحة أو سنوركلينج وجلسة بحرية.",
+                    260.0,
+                    "Red Sea Operator",
+                    "https://example.com/jeddah-redsea-boat",
+                ),
+                (
+                    "Jeddah",
+                    "Historic Jeddah (Al Balad) Tour",
+                    "Culture",
+                    "جولة في جدة التاريخية مع زيارة البيوت القديمة والأسواق الشعبية.",
+                    130.0,
+                    "Heritage Guide",
+                    "https://example.com/jeddah-albalad",
+                ),
+
                 # Makkah
-                ("Makkah","Umrah Program & City Tour","Religious","برنامج عمرة كامل مع نقل وإرشاد وزيارة لبعض المعالم في مكة المكرمة.",230.0,"Umrah Partner","https://example.com/makkah-umrah"),
-                ("Makkah","Makkah Historical Sites Tour","Religious","زيارة بعض المواقع التاريخية المرتبطة بالسيرة النبوية حول مكة المكرمة.",150.0,"Religious Guide","https://example.com/makkah-historical"),
+                (
+                    "Makkah",
+                    "Umrah Program & City Tour",
+                    "Religious",
+                    "برنامج عمرة كامل مع نقل وإرشاد وزيارة لبعض المعالم في مكة المكرمة.",
+                    230.0,
+                    "Umrah Partner",
+                    "https://example.com/makkah-umrah",
+                ),
+                (
+                    "Makkah",
+                    "Makkah Historical Sites Tour",
+                    "Religious",
+                    "زيارة بعض المواقع التاريخية المرتبطة بالسيرة النبوية حول مكة المكرمة.",
+                    150.0,
+                    "Religious Guide",
+                    "https://example.com/makkah-historical",
+                ),
+
                 # Madina
-                ("Madina","Ziyarah of Madina Landmarks","Religious","زيارة عدد من المساجد والمعالم التاريخية في المدينة المنورة مع مرشد.",160.0,"Ziyarah Partner","https://example.com/madina-ziyarah"),
-                ("Madina","Madina Night Markets Walk","Leisure","جولة في الأسواق والمناطق التجارية القريبة من المسجد النبوي.",70.0,"Local Guide","https://example.com/madina-markets"),
+                (
+                    "Madina",
+                    "Ziyarah of Madina Landmarks",
+                    "Religious",
+                    "زيارة عدد من المساجد والمعالم التاريخية في المدينة المنورة مع مرشد.",
+                    160.0,
+                    "Ziyarah Partner",
+                    "https://example.com/madina-ziyarah",
+                ),
+                (
+                    "Madina",
+                    "Madina Night Markets Walk",
+                    "Leisure",
+                    "جولة في الأسواق والمناطق التجارية القريبة من المسجد النبوي.",
+                    70.0,
+                    "Local Guide",
+                    "https://example.com/madina-markets",
+                ),
+
                 # Dammam & Al Khobar
-                ("Dammam","Dammam Corniche & Park","Leisure","جلسة على كورنيش الدمام مع حدائق وألعاب أطفال ومطاعم مطلة على الخليج.",60.0,"Local Operator","https://example.com/dammam-corniche"),
-                ("Al Khobar","Al Khobar Waterfront & Skywalk","Leisure","نزهة في واجهة الخبر البحرية مع ممشى وسكاي ووك ومقاهي ومطاعم مميزة.",75.0,"Local Operator","https://example.com/khobar-waterfront"),
-                ("Al Khobar","Family Entertainment Center Visit","Family","زيارة مركز ترفيهي مغلق للعائلات مع ألعاب إلكترونية وجلسات مريحة.",95.0,"Entertainment Center","https://example.com/khobar-family-center"),
+                (
+                    "Dammam",
+                    "Dammam Corniche & Park",
+                    "Leisure",
+                    "جلسة على كورنيش الدمام مع حدائق وألعاب أطفال ومطاعم مطلة على الخليج.",
+                    60.0,
+                    "Local Operator",
+                    "https://example.com/dammam-corniche",
+                ),
+                (
+                    "Al Khobar",
+                    "Al Khobar Waterfront & Skywalk",
+                    "Leisure",
+                    "نزهة في واجهة الخبر البحرية مع ممشى وسكاي ووك ومقاهي ومطاعم مميزة.",
+                    75.0,
+                    "Local Operator",
+                    "https://example.com/khobar-waterfront",
+                ),
+                (
+                    "Al Khobar",
+                    "Family Entertainment Center Visit",
+                    "Family",
+                    "زيارة مركز ترفيهي مغلق للعائلات مع ألعاب إلكترونية وجلسات مريحة.",
+                    95.0,
+                    "Entertainment Center",
+                    "https://example.com/khobar-family-center",
+                ),
+
                 # Abha
-                ("Abha","Abha Mountains & Cable Car","Nature","تجربة العربات المعلقة مع إطلالات على الجبال والقرى في مدينة أبها.",200.0,"Abha Operator","https://example.com/abha-cablecar"),
-                ("Abha","Rijal Almaa Heritage Village Tour","Culture","زيارة قرية رجال ألمع التراثية واستكشاف الطراز المعماري الفريد.",170.0,"Heritage Guide","https://example.com/abha-rijal-almaa"),
+                (
+                    "Abha",
+                    "Abha Mountains & Cable Car",
+                    "Nature",
+                    "تجربة العربات المعلقة مع إطلالات على الجبال والقرى في مدينة أبها.",
+                    200.0,
+                    "Abha Operator",
+                    "https://example.com/abha-cablecar",
+                ),
+                (
+                    "Abha",
+                    "Rijal Almaa Heritage Village Tour",
+                    "Culture",
+                    "زيارة قرية رجال ألمع التراثية واستكشاف الطراز المعماري الفريد.",
+                    170.0,
+                    "Heritage Guide",
+                    "https://example.com/abha-rijal-almaa",
+                ),
+
                 # Taif
-                ("Taif","Taif Rose Farms Visit","Culture","زيارة مزارع الورد الطائفي والتعرف على صناعة ماء الورد والعطور.",140.0,"Rose Farm Partner","https://example.com/taif-roses"),
-                ("Taif","Taif Cable Car & Mountains","Nature","جولة في جبال الهدا أو الشفا مع العربات المعلقة وإطلالات جميلة.",180.0,"Taif Operator","https://example.com/taif-cablecar"),
+                (
+                    "Taif",
+                    "Taif Rose Farms Visit",
+                    "Culture",
+                    "زيارة مزارع الورد الطائفي والتعرف على صناعة ماء الورد والعطور.",
+                    140.0,
+                    "Rose Farm Partner",
+                    "https://example.com/taif-roses",
+                ),
+                (
+                    "Taif",
+                    "Taif Cable Car & Mountains",
+                    "Nature",
+                    "جولة في جبال الهدا أو الشفا مع العربات المعلقة وإطلالات جميلة.",
+                    180.0,
+                    "Taif Operator",
+                    "https://example.com/taif-cablecar",
+                ),
+
                 # AlUla
-                ("AlUla","AlUla Heritage & Nature Tour","Nature","جولة في المواقع الأثرية والطبيعية بالعلا مع مرشد محلي.",350.0,"AlUla Partner","https://example.com/alula-heritage"),
-                ("AlUla","AlUla Stargazing Night","Adventure","ليلة تحت النجوم في صحراء العلا مع جلسة بدوية وشرح عن السماء.",320.0,"Stargazing Operator","https://example.com/alula-stargazing"),
+                (
+                    "AlUla",
+                    "AlUla Heritage & Nature Tour",
+                    "Nature",
+                    "جولة في المواقع الأثرية والطبيعية بالعلا مع مرشد محلي.",
+                    350.0,
+                    "AlUla Partner",
+                    "https://example.com/alula-heritage",
+                ),
+                (
+                    "AlUla",
+                    "AlUla Stargazing Night",
+                    "Adventure",
+                    "ليلة تحت النجوم في صحراء العلا مع جلسة بدوية وشرح عن السماء.",
+                    320.0,
+                    "Stargazing Operator",
+                    "https://example.com/alula-stargazing",
+                ),
+
                 # Tabuk
-                ("Tabuk","Tabuk Desert & Historical Tour","Adventure","زيارة بعض المواقع الطبيعية والتاريخية حول تبوك مع جولة في الصحراء.",260.0,"Tabuk Operator","https://example.com/tabuk-desert"),
+                (
+                    "Tabuk",
+                    "Tabuk Desert & Historical Tour",
+                    "Adventure",
+                    "زيارة بعض المواقع الطبيعية والتاريخية حول تبوك مع جولة في الصحراء.",
+                    260.0,
+                    "Tabuk Operator",
+                    "https://example.com/tabuk-desert",
+                ),
+
                 # NEOM
-                ("NEOM Region","NEOM Future Discovery Tour (Concept)","Futuristic","تجربة تعريفية برؤية نيوم وزيارة بعض المواقع المفتوحة حالياً حسب الأنظمة.",400.0,"NEOM Experience","https://example.com/neom-discovery"),
+                (
+                    "NEOM Region",
+                    "NEOM Future Discovery Tour (Concept)",
+                    "Futuristic",
+                    "تجربة تعريفية برؤية نيوم وزيارة بعض المواقع المفتوحة حالياً حسب الأنظمة.",
+                    400.0,
+                    "NEOM Experience",
+                    "https://example.com/neom-discovery",
+                ),
+
                 # Diriyah
-                ("Diriyah","Diriyah Heritage District Walk","Culture","جولة في منطقة الدرعية التاريخية مع مسار للمشاة ومقاهي ومتاحف.",160.0,"Diriyah Operator","https://example.com/diriyah-heritage"),
+                (
+                    "Diriyah",
+                    "Diriyah Heritage District Walk",
+                    "Culture",
+                    "جولة في منطقة الدرعية التاريخية مع مسار للمشاة ومقاهي ومتاحف.",
+                    160.0,
+                    "Diriyah Operator",
+                    "https://example.com/diriyah-heritage",
+                ),
             ]
             cur.executemany(
                 """
@@ -241,12 +483,14 @@ def init_db():
             )
             conn.commit()
 
-# تهيئة الجداول
+
 init_db()
 
 # ==============================
 # 3) دوال CRUD
 # ==============================
+
+
 def add_hotel(
     name: str,
     city: str,
@@ -269,9 +513,12 @@ def add_hotel(
         )
         conn.commit()
 
+
 def list_hotels() -> pd.DataFrame:
     with get_conn() as conn:
-        return pd.read_sql_query("SELECT * FROM hotels ORDER BY id DESC", conn)
+        df = pd.read_sql_query("SELECT * FROM hotels ORDER BY id DESC", conn)
+    return df
+
 
 def add_contract(
     hotel_id: int,
@@ -294,14 +541,22 @@ def add_contract(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                hotel_id, contract_name, contract_type, currency, valid_from, valid_to,
-                payment_terms, cancellation_policy, notes,
+                hotel_id,
+                contract_name,
+                contract_type,
+                currency,
+                valid_from,
+                valid_to,
+                payment_terms,
+                cancellation_policy,
+                notes,
             ),
         )
         conn.commit()
 
+
 def list_contracts() -> pd.DataFrame:
-    q = """
+    query = """
     SELECT
         c.id,
         h.name AS hotel_name,
@@ -318,29 +573,42 @@ def list_contracts() -> pd.DataFrame:
     ORDER BY c.id DESC
     """
     with get_conn() as conn:
-        return pd.read_sql_query(q, conn)
+        df = pd.read_sql_query(query, conn)
+    return df
+
 
 def list_activities(city_filter: Optional[str] = None, category_filter: Optional[str] = None) -> pd.DataFrame:
-    base = "SELECT * FROM activities"
+    base_query = "SELECT * FROM activities"
     params: List[Any] = []
-    conds: List[str] = []
-    if city_filter and city_filter not in ("الكل", "All"):
-        conds.append("city = ?"); params.append(city_filter)
-    if category_filter and category_filter not in ("الكل", "All"):
-        conds.append("category = ?"); params.append(category_filter)
-    if conds:
-        base += " WHERE " + " AND ".join(conds)
-    base += " ORDER BY city, category, name"
+    conditions: List[str] = []
+
+    if city_filter and city_filter != "الكل":
+        conditions.append("city = ?")
+        params.append(city_filter)
+
+    if category_filter and category_filter != "الكل":
+        conditions.append("category = ?")
+        params.append(category_filter)
+
+    if conditions:
+        base_query += " WHERE " + " AND ".join(conditions)
+
+    base_query += " ORDER BY city, category, name"
+
     with get_conn() as conn:
-        return pd.read_sql_query(base, conn, params=params)
+        df = pd.read_sql_query(base_query, conn, params=params)
+    return df
+
 
 def get_activities_by_ids(ids: List[int]) -> pd.DataFrame:
     if not ids:
         return pd.DataFrame()
     placeholders = ",".join(["?"] * len(ids))
-    q = f"SELECT * FROM activities WHERE id IN ({placeholders}) ORDER BY city, name"
+    query = f"SELECT * FROM activities WHERE id IN ({placeholders}) ORDER BY city, name"
     with get_conn() as conn:
-        return pd.read_sql_query(q, conn, params=ids)
+        df = pd.read_sql_query(query, conn, params=ids)
+    return df
+
 
 def save_itinerary(
     traveller_name: str,
@@ -387,9 +655,10 @@ def save_itinerary(
         )
         conn.commit()
 
+
 def list_itineraries() -> pd.DataFrame:
     with get_conn() as conn:
-        return pd.read_sql_query(
+        df = pd.read_sql_query(
             """
             SELECT
                 id,
@@ -409,6 +678,8 @@ def list_itineraries() -> pd.DataFrame:
             """,
             conn,
         )
+    return df
+
 
 def get_itinerary(itinerary_id: int) -> Optional[Dict[str, Any]]:
     with get_conn() as conn:
@@ -419,6 +690,7 @@ def get_itinerary(itinerary_id: int) -> Optional[Dict[str, Any]]:
             return None
         columns = [desc[0] for desc in cur.description]
         return dict(zip(columns, row))
+
 
 def add_package(
     name: str,
@@ -475,9 +747,10 @@ def add_package(
         )
         conn.commit()
 
+
 def list_packages() -> pd.DataFrame:
     with get_conn() as conn:
-        return pd.read_sql_query(
+        df = pd.read_sql_query(
             """
             SELECT
                 id,
@@ -495,6 +768,8 @@ def list_packages() -> pd.DataFrame:
             """,
             conn,
         )
+    return df
+
 
 def get_package(package_id: int) -> Optional[Dict[str, Any]]:
     with get_conn() as conn:
@@ -505,6 +780,7 @@ def get_package(package_id: int) -> Optional[Dict[str, Any]]:
             return None
         columns = [desc[0] for desc in cur.description]
         return dict(zip(columns, row))
+
 
 def add_booking_request(
     traveller_name: str,
@@ -560,9 +836,10 @@ def add_booking_request(
         )
         conn.commit()
 
+
 def list_booking_requests() -> pd.DataFrame:
     with get_conn() as conn:
-        return pd.read_sql_query(
+        df = pd.read_sql_query(
             """
             SELECT
                 id,
@@ -584,16 +861,22 @@ def list_booking_requests() -> pd.DataFrame:
             """,
             conn,
         )
+    return df
+
 
 # ==============================
-# 4) تكامل OpenAI (اختياري للخطط/المساعد)
+# 4) تكامل OpenAI
 # ==============================
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 try:
     from openai import OpenAI
+
     client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 except Exception:
     client = None
+
 
 def _call_ai(instructions: str, user_input: str) -> str:
     if not client or not OPENAI_API_KEY:
@@ -611,6 +894,7 @@ def _call_ai(instructions: str, user_input: str) -> str:
     except Exception as e:
         return f"حدث خطأ أثناء الاتصال بـ OpenAI: {e}"
 
+
 def ai_travel_plan(form_data: Dict[str, Any]) -> str:
     instructions = (
         "أنت مساعد سياحي احترافي يعمل ضمن منصة HUMAIN Lifestyle. "
@@ -618,6 +902,7 @@ def ai_travel_plan(form_data: Dict[str, Any]) -> str:
         "بميزانية محددة، وبأسلوب مرتب وواضح. ركّز على القيمة مقابل المال، "
         "واذكر أفكار لأنشطة (عمرة، ترفيه، تسوق، فعاليات، مباريات) حسب اهتمامات المستخدم."
     )
+
     user_prompt = f"""
 المدينة الحالية: {form_data['from_city']}
 الوجهة: {form_data['destination_city']}, {form_data['destination_country']}
@@ -634,6 +919,15 @@ def ai_travel_plan(form_data: Dict[str, Any]) -> str:
 """
     return _call_ai(instructions, user_prompt)
 
+
+def ai_contract_helper(prompt: str) -> str:
+    instructions = (
+        "أنت مساعد قانوني/تجاري مختص في عقود توزيع وحجوزات الفنادق. "
+        "اكتب بنود عقود أو سياسات إلغاء أو شروط دفع بصياغة عربية احترافية، مختصرة وواضحة."
+    )
+    return _call_ai(instructions, prompt)
+
+
 def ai_general_chat(prompt: str) -> str:
     instructions = (
         "أنت مساعد ذكي في منصة HUMAIN Lifestyle، تساعد المستخدم في تخطيط السفر، "
@@ -641,33 +935,12 @@ def ai_general_chat(prompt: str) -> str:
     )
     return _call_ai(instructions, prompt)
 
+
 # ==============================
-# 5) واجهات الصفحات (كل صفحة تسجّل page_view)
+# 5) واجهات الصفحات
 # ==============================
-def footer_company():
-    st.markdown("---")
-    st.markdown(
-        """
-<div style="display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
-  <div style="display:flex;gap:10px;align-items:center;">
-    <div style="width:32px;height:32px;border-radius:8px;border:1px solid #D4AF37;padding:3px;background:white;color:#0b1220;display:flex;align-items:center;justify-content:center;font-weight:900">HL</div>
-    <div>
-      <div style="font-weight:700;">Dar AL Khartoum Travel And Tourism CO LTD</div>
-      <div style="opacity:.9;">شركة دار الخرطوم للسفر والسياحة المحدودة</div>
-    </div>
-  </div>
-  <div style="line-height:1.3;font-size:14px;">
-    <div>hamed mukhtar — <a href="mailto:hamed.mukhtar@daral-sd.com">hamed.mukhtar@daral-sd.com</a></div>
-    <div>web: <a href="https://www.daral-sd.com" target="_blank">www.daral-sd.com</a></div>
-    <div>Tel: +20 111 333 6672 — WhatsApp: +249 912 399 919</div>
-  </div>
-</div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 def page_home():
-    track_page_view("Home")
     render_header()
     st.title("🌍 HUMAIN Lifestyle")
     st.caption("your gateway to KSA — منصّة ذكية تربط بين الزائر، المعتمر، والمستثمر")
@@ -692,30 +965,52 @@ def page_home():
         )
 
     with col2:
+        role = st.session_state.get("auth_role", "-")
+        user = st.session_state.get("auth_user", "-")
         st.info(
-            "ℹ️ **Live Demo — وضع عرض حي**\n\n"
+            "ℹ️ **Demo Mode — وضع العرض التجريبي**\n\n"
+            f"- المستخدم الحالي: **{user}** (الدور: **{role}**)\n"
             "- البيانات الحالية تجريبية وليست مرتبطة بأنظمة حجز حقيقية.\n"
-            "- كل الطلبات (Flights, Rail, Umrah, Investor, ...) تُسجَّل في النظام كـ Leads.\n"
-            "- البنية جاهزة للربط لاحقاً."
+            "- كل الطلبات (Flights, Rail, Umrah, Investor...) تُسجَّل في النظام كـ Leads.\n"
+            "- البنية جاهزة للربط مع HUMAIN ONE، ALLAM، وموفّري خدمات في السعودية لاحقاً."
         )
 
     st.markdown("---")
     st.markdown("### 👥 من المنصّة دي موجهة لمين؟")
 
     c1, c2, c3 = st.columns(3)
+
     with c1:
         st.markdown("#### 🧳 Travelers & Visitors")
-        st.markdown("- تخطيط رحلة إلى مدينة سعودية\n- اختيار أنشطة وتجارب\n- تجميع برنامج كامل (Package)")
+        st.markdown(
+            """
+- تخطيط رحلة إلى مدينة سعودية
+- اختيار أنشطة وتجارب
+- تجميع برنامج كامل (Package)
+"""
+        )
         st.markdown("**جرّب:**\n- 🧭 Trip Planner\n- 🎟️ Experiences\n- 📦 Packages")
 
     with c2:
         st.markdown("#### 🕋 Pilgrims (Umrah & Hajj)")
-        st.markdown("- برنامج عمرة أو عمرة + سياحة\n- سكن مكة/المدينة\n- تنقّل وأنشطة")
+        st.markdown(
+            """
+- طلب برنامج عمرة أو عمرة + سياحة
+- سكن في مكة والمدينة
+- تنقّل، أنشطة دينية وترفيهية
+"""
+        )
         st.markdown("**جرّب:**\n- 🕋 Umrah & Hajj\n- ✈️ Flights to KSA\n- 🚄 Saudi Rail")
 
     with c3:
         st.markdown("#### 💼 Investors & Business")
-        st.markdown("- تأسيس شركة وخدمات الإقامة\n- مكاتب، شقق، بنوك\n- طلب موحّد للمستثمر")
+        st.markdown(
+            """
+- تأسيس شركة أو نشاط تجاري
+- مكاتب، شقق، بنوك، استشارات
+- طلب موحّد لكل خدمات الاستثمار
+"""
+        )
         st.markdown("**جرّب:**\n- 💼 Invest in KSA\n- 📥 Booking Requests (Admin)")
 
     st.markdown("---")
@@ -727,45 +1022,82 @@ def page_home():
 - 🎟️ **Experiences & Activities** → كتالوج أنشطة وتجارب داخل مدن المملكة.  
 - 📦 **Packages / Programs** → تحويل الخطط إلى منتجات جاهزة للبيع.  
 - ✈️ **Flights to KSA** & 🚄 **Saudi Rail** → تجميع طلبات السفر (Leads) للطيران والقطار.  
-- 🕋 **Umrah & Hajj** → بوابة برامج العمرة والحج.  
-- 💼 **Invest in KSA** → بوابة المستثمرين.  
-- 🏙️ **Local Lifestyle & Services**، 🩺 **Health & Insurance**، 🎓 **Education & Jobs**.  
-- 📥 **Booking Requests (Admin)**، 🏨 **Hotels & Contracts (Admin)**، 🤖 **AI Assistant**.
+- 🕋 **Umrah & Hajj** → بوابة برامج العمرة والحج، تمهيداً للتكامل مع منصات رسمية.  
+- 💼 **Invest in KSA** → بوابة المستثمرين لتجميع كل طلباتهم في مكان واحد.  
+- 🏙️ **Local Lifestyle & Services** → الطلب على خدمات الحياة اليومية داخل المملكة.  
+- 🩺 **Health & Insurance** → بوابة طلب التأمين والعلاج والمستشفيات.  
+- 🎓 **Education & Jobs** → بوابة التعليم وفرص العمل داخل المملكة.  
+- 📊 **Leads Dashboard (Admin)** → لوحة مؤشرات لإجمالي الطلبات حسب المصدر والحالة.  
+- 📥 **Booking Requests (Admin)** → شاشة الإدارة لمتابعة كل الـ Leads.  
+- 🏨 **Hotels & Contracts (Admin)** → إدارة الفنادق والعقود الخلفية (Back-office).  
+- 🤖 **AI Assistant** → مساعد ذكي مدمج داخل المنصّة.
 """
     )
-    footer_company()
+
 
 def page_trip_planner():
-    track_page_view("TripPlanner")
     render_header()
     st.title("🧭 Trip Planner (B2C) — مخطِّط رحلة ذكي")
 
-    st.write("أدخل تفضيلاتك الأساسية، ودع المنصة تقترح لك خطة رحلة متكاملة إلى السعودية.")
+    st.write(
+        "أدخل تفضيلاتك الأساسية، ودع المنصة تقترح لك خطة رحلة متكاملة "
+        "إلى السعودية (كخطوة أولى في الـ Demo)."
+    )
 
     with st.form("trip_form"):
         col1, col2 = st.columns(2)
+
         with col1:
             from_city = st.text_input("أين أنت الآن؟ (مدينة الانطلاق)", value="Cairo")
             destination_country = st.text_input("الوجهة (الدولة)", value="Saudi Arabia")
             destination_city = st.selectbox(
                 "مدينة الوجهة داخل السعودية",
-                ["Riyadh","Jeddah","Makkah","Madina","Dammam","Al Khobar","Abha","Taif","AlUla","Tabuk","NEOM Region","Diriyah"],
+                [
+                    "Riyadh",
+                    "Jeddah",
+                    "Makkah",
+                    "Madina",
+                    "Dammam",
+                    "Al Khobar",
+                    "Abha",
+                    "Taif",
+                    "AlUla",
+                    "Tabuk",
+                    "NEOM Region",
+                    "Diriyah",
+                ],
             )
+
         with col2:
-            budget = st.slider("الميزانية الكلية بالدولار", 500, 10000, 2500, step=100)
-            days = st.slider("مدة الرحلة (أيام)", 3, 21, 7)
+            budget = st.slider("الميزانية الكلية بالدولار", min_value=500, max_value=10000, value=2500, step=100)
+            days = st.slider("مدة الرحلة (أيام)", min_value=3, max_value=21, value=7)
             month = st.selectbox(
                 "شهر السفر المتوقع",
-                ["غير محدد","يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"],
+                [
+                    "غير محدد",
+                    "يناير",
+                    "فبراير",
+                    "مارس",
+                    "أبريل",
+                    "مايو",
+                    "يونيو",
+                    "يوليو",
+                    "أغسطس",
+                    "سبتمبر",
+                    "أكتوبر",
+                    "نوفمبر",
+                    "ديسمبر",
+                ],
             )
 
         interests = st.multiselect(
-            "ما هي اهتماماتك الرئيسية؟",
-            ["عمرة","سياحة دينية","تسوق","فعاليات ترفيهية","مباريات كرة","طبيعة وهدوء","مطاعم وتجارب طعام"],
+            "ما هي اهتماماتك الرئيسية في هذه الرحلة؟",
+            ["عمرة", "سياحة دينية", "تسوق", "فعاليات ترفيهية", "مباريات كرة", "طبيعة وهدوء", "مطاعم وتجارب طعام"],
         )
 
         st.markdown("---")
         st.markdown("### حفظ هذه الخطة في النظام (اختياري)")
+
         col3, col4 = st.columns(2)
         with col3:
             traveller_name = st.text_input("اسم المسافر (اختياري)")
@@ -804,21 +1136,29 @@ def page_trip_planner():
             st.success("✅ تم حفظ هذه الخطة في قسم Saved Itineraries.")
         elif save_plan_flag and plan_text.startswith("⚠️"):
             st.warning("لم يتم الحفظ لأن التكامل مع الذكاء الاصطناعي غير مفعّل حالياً.")
-    footer_company()
+
+        st.markdown("---")
+        st.caption(
+            "هذه خطة تجريبية (Demo) مبنية على الذكاء الاصطناعي فقط، "
+            "وليست مرتبطة بعد بأنظمة حجز حقيقية."
+        )
+
 
 def page_activities():
-    track_page_view("Activities")
     render_header()
     st.title("🎟️ Experiences & Activities — الأنشطة والتجارب")
 
-    st.write("كتالوج تجريبي لأنشطة وتجارب داخل مدن مختلفة في السعودية.")
+    st.write(
+        "كتالوج تجريبي لأنشطة وتجارب داخل مدن مختلفة في السعودية. "
+        "يمكن لاحقاً ربط هذه الأنشطة بمنصات حجز حقيقية (Tickets, Events, Tours APIs)."
+    )
 
     with get_conn() as conn:
         df_all = pd.read_sql_query("SELECT DISTINCT city FROM activities ORDER BY city;", conn)
         df_cat = pd.read_sql_query("SELECT DISTINCT category FROM activities ORDER BY category;", conn)
 
-    cities = [t("الكل", "All")] + df_all["city"].tolist()
-    categories = [t("الكل", "All")] + df_cat["category"].dropna().tolist()
+    cities = ["الكل"] + df_all["city"].tolist()
+    categories = ["الكل"] + df_cat["category"].dropna().tolist()
 
     col1, col2 = st.columns(2)
     with col1:
@@ -830,7 +1170,7 @@ def page_activities():
 
     if df.empty:
         st.info("لا توجد أنشطة مطابقة للفلتر الحالي.")
-        footer_company(); return
+        return
 
     st.markdown("---")
     st.subheader("الأنشطة المتاحة")
@@ -850,17 +1190,16 @@ def page_activities():
             with col3:
                 if row["booking_link"]:
                     st.link_button("رابط حجز (تجريبي)", row["booking_link"])
-    footer_company()
+
 
 def page_itineraries():
-    track_page_view("Itineraries")
     render_header()
     st.title("📝 Saved Itineraries — خطط الرحلات المحفوظة")
 
     df = list_itineraries()
     if df.empty:
         st.info("لا توجد خطط رحلات محفوظة حتى الآن. جرّب إنشاء خطة من صفحة Trip Planner.")
-        footer_company(); return
+        return
 
     st.subheader("قائمة الخطط")
     st.dataframe(df, use_container_width=True, hide_index=True)
@@ -882,7 +1221,7 @@ def page_itineraries():
             details = get_itinerary(selected_id)
             if not details:
                 st.error("تعذر تحميل تفاصيل هذه الخطة.")
-                footer_company(); return
+                return
 
             st.markdown("### تفاصيل الخطة")
             st.write(f"👤 المسافر: {details.get('traveller_name') or 'غير محدد'}")
@@ -898,16 +1237,18 @@ def page_itineraries():
             st.markdown("---")
             st.markdown("### نص الخطة الكاملة:")
             st.write(details.get("plan_text") or "")
-    footer_company()
+
 
 def page_packages():
-    track_page_view("Packages")
     render_header()
     st.title("📦 Packages / Programs — برامج جاهزة للبيع")
 
-    st.write("حوّل خطط الرحلات المحفوظة إلى برامج (Packages).")
+    st.write(
+        "حوّل خطط الرحلات المحفوظة إلى برامج (Packages) تحتوي على: مدينة، فندق، أنشطة، وسعر تقريبي."
+    )
 
     tab_create, tab_list = st.tabs(["إنشاء برنامج جديد", "قائمة البرامج"])
+
     # إنشاء برنامج جديد
     with tab_create:
         itineraries_df = list_itineraries()
@@ -915,10 +1256,14 @@ def page_packages():
             st.info("لا توجد خطط رحلات محفوظة بعد. جرّب إنشاء خطة من صفحة Trip Planner أولاً.")
         else:
             st.subheader("1) اختر خطة رحلة كأساس للبرنامج")
+
             labels = []
             id_mapping: Dict[str, int] = {}
             for _, row in itineraries_df.iterrows():
-                label = f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} ({row['from_city']} → {row['destination_city']}, {row['days']} أيام)"
+                label = (
+                    f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} "
+                    f"({row['from_city']} → {row['destination_city']}, {row['days']} أيام)"
+                )
                 labels.append(label)
                 id_mapping[label] = int(row["id"])
 
@@ -956,13 +1301,25 @@ def page_packages():
                 with col1:
                     pkg_days = st.number_input("عدد الأيام", min_value=1, max_value=60, value=default_days)
                 with col2:
-                    pkg_budget = st.number_input("الميزانية التقديرية (من الواقع)", min_value=100.0, max_value=50000.0, value=default_budget, step=100.0)
+                    pkg_budget = st.number_input(
+                        "الميزانية التقديرية (من الواقع)", min_value=100.0, max_value=50000.0,
+                        value=default_budget, step=100.0
+                    )
                 with col3:
-                    pkg_price_from = st.number_input("سعر البيع (ابتداءً من)", min_value=100.0, max_value=100000.0, value=default_budget, step=100.0)
+                    pkg_price_from = st.number_input(
+                        "سعر البيع (ابتداءً من)", min_value=100.0, max_value=100000.0,
+                        value=default_budget, step=100.0
+                    )
 
-                target_segment = st.selectbox("الفئة المستهدفة", ["Individuals", "Families", "Groups", "VIP", "Umrah"])
+                target_segment = st.selectbox(
+                    "الفئة المستهدفة",
+                    ["Individuals", "Families", "Groups", "VIP", "Umrah"],
+                )
 
-                base_hotel_label = st.selectbox("الفندق الأساسي في البرنامج (اختياري)", list(hotel_options.keys()))
+                base_hotel_label = st.selectbox(
+                    "الفندق الأساسي في البرنامج (اختياري)",
+                    list(hotel_options.keys()),
+                )
                 base_hotel_id = hotel_options[base_hotel_label]
 
                 st.markdown("#### الأنشطة داخل البرنامج")
@@ -970,7 +1327,10 @@ def page_packages():
                     st.info("لا توجد أنشطة مسجلة لهذه المدينة بعد.")
                     selected_activities_labels: List[str] = []
                 else:
-                    selected_activities_labels = st.multiselect("اختر الأنشطة", activity_labels)
+                    selected_activities_labels = st.multiselect(
+                        "اختر الأنشطة",
+                        activity_labels,
+                    )
 
                 pkg_status = st.selectbox("حالة البرنامج", ["Draft", "Active"])
                 pkg_notes = st.text_area("ملاحظات إضافية (اختياري)")
@@ -1005,10 +1365,11 @@ def page_packages():
     # قائمة البرامج
     with tab_list:
         st.subheader("قائمة البرامج المتاحة")
+
         packages_df = list_packages()
         if packages_df.empty:
             st.info("لا توجد برامج محفوظة حتى الآن.")
-            footer_company(); return
+            return
 
         st.dataframe(packages_df, use_container_width=True, hide_index=True)
 
@@ -1027,7 +1388,7 @@ def page_packages():
             details = get_package(pkg_id)
             if not details:
                 st.error("تعذر تحميل تفاصيل البرنامج.")
-                footer_company(); return
+                return
 
             st.markdown("### تفاصيل البرنامج")
             st.write(f"📦 اسم البرنامج: **{details.get('name')}**")
@@ -1044,6 +1405,7 @@ def page_packages():
                 st.write(details["notes"])
 
             st.markdown("---")
+            # الأنشطة المرتبطة
             activities_ids_str = details.get("activities_ids") or ""
             ids_list: List[int] = []
             if activities_ids_str.strip():
@@ -1057,24 +1419,33 @@ def page_packages():
                 df_acts = get_activities_by_ids(ids_list)
                 if not df_acts.empty:
                     for _, row in df_acts.iterrows():
-                        st.write(f"- {row['name']} — {row['city']} ({row['category']}) — تقريباً {row['approx_price_usd']} USD")
+                        st.write(
+                            f"- {row['name']} — {row['city']} ({row['category']}) "
+                            f"— تقريباً {row['approx_price_usd']} USD"
+                        )
                 else:
                     st.info("لا يمكن تحميل تفاصيل الأنشطة المرتبطة.")
             else:
                 st.info("لا توجد أنشطة مرتبطة لهذا البرنامج حالياً.")
+
             st.markdown("---")
             st.markdown("#### الخطة التفصيلية (من خطة الرحلة الأصلية)")
             st.write(details.get("ai_plan_text") or "لا توجد خطة مرتبطة.")
-    footer_company()
+
 
 def page_booking_requests():
-    track_page_view("BookingRequests")
+    if not require_admin():
+        return
+
     render_header()
     st.title("📥 Booking Requests (Admin) — طلبات الحجز")
 
-    st.write("هنا يمكنك تسجيل ومراجعة طلبات الحجز (Leads).")
+    st.write(
+        "هنا يمكنك تسجيل ومراجعة طلبات الحجز (Leads) المرتبطة بالبرامج، الرحلات، العمرة، الطيران، القطار، أو المستثمرين."
+    )
 
     tab_new, tab_list = st.tabs(["طلب جديد يدوي", "قائمة الطلبات"])
+
     # طلب جديد يدوي
     with tab_new:
         st.subheader("تسجيل طلب حجز جديد (Manual)")
@@ -1091,7 +1462,10 @@ def page_booking_requests():
         itin_options: Dict[str, Optional[int]] = {"بدون ربط بخطة محددة": None}
         if not itineraries_df.empty:
             for _, row in itineraries_df.iterrows():
-                label = f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} ({row['from_city']} → {row['destination_city']})"
+                label = (
+                    f"#{row['id']} — {row['traveller_name'] or 'بدون اسم'} "
+                    f"({row['from_city']} → {row['destination_city']})"
+                )
                 itin_options[label] = int(row["id"])
 
         with st.form("new_booking_request"):
@@ -1104,7 +1478,10 @@ def page_booking_requests():
                 from_city = st.text_input("مدينة الانطلاق", value="Cairo")
                 to_city = st.text_input("الوجهة الرئيسية", value="Riyadh")
                 days = st.number_input("عدد الأيام", min_value=1, max_value=60, value=7)
-                budget = st.number_input("الميزانية التقريبية (دولار)", min_value=100.0, max_value=100000.0, value=2500.0, step=100.0)
+                budget = st.number_input(
+                    "الميزانية التقريبية (دولار)", min_value=100.0, max_value=100000.0,
+                    value=2500.0, step=100.0
+                )
 
             st.markdown("#### ربط الطلب ببرنامج أو خطة (اختياري)")
             col3, col4 = st.columns(2)
@@ -1115,10 +1492,17 @@ def page_booking_requests():
                 itin_label = st.selectbox("ربط بخطة رحلة", list(itin_options.keys()))
                 itinerary_id = itin_options[itin_label]
 
-            source = st.selectbox("مصدر الطلب", ["Web","Mobile","Agent","Flights","Rail","Umrah/Hajj","Investor","Lifestyle","Health/Insurance","Education/Jobs","Other"])
-            status = st.selectbox("حالة الطلب", ["New","In Progress","Confirmed","Cancelled"])
+            source = st.selectbox(
+                "مصدر الطلب",
+                ["Web", "Mobile", "Agent", "Flights", "Rail", "Umrah/Hajj", "Investor", "Lifestyle", "Health/Insurance", "Education/Jobs", "Other"],
+            )
+            status = st.selectbox(
+                "حالة الطلب",
+                ["New", "In Progress", "Confirmed", "Cancelled"],
+            )
 
             notes = st.text_area("ملاحظات / تفاصيل إضافية")
+
             submitted_req = st.form_submit_button("💾 حفظ الطلب")
 
         if submitted_req:
@@ -1145,44 +1529,232 @@ def page_booking_requests():
     # قائمة الطلبات
     with tab_list:
         st.subheader("قائمة طلبات الحجز")
+
         df = list_booking_requests()
         if df.empty:
             st.info("لا توجد طلبات حجز مسجلة حتى الآن.")
-            footer_company(); return
+            return
 
+        # فلتر بسيط حسب المصدر والحالة
         col1, col2 = st.columns(2)
         with col1:
-            source_filter = st.selectbox("فلتر حسب المصدر", [t("الكل","All")] + sorted(df["source"].dropna().unique().tolist()))
+            source_filter = st.selectbox(
+                "فلتر حسب المصدر",
+                ["الكل"] + sorted(df["source"].dropna().unique().tolist()),
+            )
         with col2:
-            status_filter = st.selectbox("فلتر حسب الحالة", [t("الكل","All")] + sorted(df["status"].dropna().unique().tolist()))
+            status_filter = st.selectbox(
+                "فلتر حسب الحالة",
+                ["الكل"] + sorted(df["status"].dropna().unique().tolist()),
+            )
 
         df_filtered = df.copy()
-        if source_filter != t("الكل","All"):
+        if source_filter != "الكل":
             df_filtered = df_filtered[df_filtered["source"] == source_filter]
-        if status_filter != t("الكل","All"):
+        if status_filter != "الكل":
             df_filtered = df_filtered[df_filtered["status"] == status_filter]
 
         st.dataframe(df_filtered, use_container_width=True, hide_index=True)
-    footer_company()
+
+
+def page_hotels_admin():
+    if not require_admin():
+        return
+
+    render_header()
+    st.title("🏨 Hotels & Contracts (Admin Demo)")
+
+    st.write(
+        "هذا القسم يوضّح كيف يمكن للمنصة إدارة الفنادق والعقود في الخلفية (Back-office)."
+    )
+
+    tab1, tab2 = st.tabs(["الفنادق", "العقود"])
+
+    # الفنادق
+    with tab1:
+        st.subheader("إضافة فندق جديد")
+
+        with st.form("add_hotel_form"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                name = st.text_input("اسم الفندق *")
+                city = st.text_input("المدينة")
+                country = st.text_input("الدولة", value="Saudi Arabia")
+
+            with col2:
+                contact_name = st.text_input("اسم مسؤول الاتصال")
+                contact_email = st.text_input("البريد الإلكتروني لمسؤول الاتصال")
+                contact_phone = st.text_input("رقم الهاتف")
+                has_api = st.checkbox("لدى الفندق نظام حجز / Channel Manager / API؟")
+
+            notes = st.text_area("ملاحظات إضافية (اختياري)")
+
+            submitted_hotel = st.form_submit_button("حفظ الفندق")
+
+        if submitted_hotel:
+            if not name.strip():
+                st.error("اسم الفندق مطلوب.")
+            else:
+                add_hotel(
+                    name=name.strip(),
+                    city=city.strip(),
+                    country=country.strip(),
+                    contact_name=contact_name.strip(),
+                    contact_email=contact_email.strip(),
+                    contact_phone=contact_phone.strip(),
+                    has_api=has_api,
+                    notes=notes.strip(),
+                )
+                st.success("✅ تم حفظ بيانات الفندق.")
+                st.experimental_rerun()
+
+        st.markdown("---")
+        st.subheader("قائمة الفنادق المسجلة")
+
+        hotels_df = list_hotels()
+        if hotels_df.empty:
+            st.info("لا توجد فنادق مسجلة بعد.")
+        else:
+            st.dataframe(hotels_df, use_container_width=True)
+
+    # العقود
+    with tab2:
+        st.subheader("إنشاء عقد جديد")
+
+        hotels_df = list_hotels()
+        if hotels_df.empty:
+            st.warning("يجب إضافة فندق واحد على الأقل قبل إنشاء عقد.")
+        else:
+            hotel_options = {
+                f"{row['name']} (#{row['id']})": int(row["id"])
+                for _, row in hotels_df.iterrows()
+            }
+
+            with st.form("add_contract_form"):
+                hotel_label = st.selectbox("اختر الفندق", list(hotel_options.keys()))
+                hotel_id = hotel_options[hotel_label]
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    contract_name = st.text_input("اسم العقد *", value="عقد توزيع غرف فندقية")
+                    contract_type = st.selectbox(
+                        "نوع العقد",
+                        ["Net Rates", "Commission", "Hybrid", "Other"],
+                    )
+                    currency = st.text_input("العملة", value="USD")
+
+                with col2:
+                    valid_from = st.date_input("تاريخ بداية العقد", value=date.today())
+                    valid_to = st.date_input(
+                        "تاريخ نهاية العقد",
+                        value=date(date.today().year + 1, 12, 31),
+                    )
+
+                payment_terms = st.text_area(
+                    "شروط الدفع",
+                    value="يتم السداد خلال 30 يومًا من تاريخ استلام الفاتورة.",
+                )
+
+                cancellation_policy = st.text_area(
+                    "سياسة الإلغاء",
+                    value="يمكن الإلغاء مجانًا حتى 48 ساعة قبل موعد الوصول، وبعد ذلك يتم خصم أول ليلة.",
+                )
+
+                notes = st.text_area("ملاحظات إضافية")
+
+                submitted_contract = st.form_submit_button("حفظ العقد")
+
+            if submitted_contract:
+                if not contract_name.strip():
+                    st.error("اسم العقد مطلوب.")
+                else:
+                    add_contract(
+                        hotel_id=hotel_id,
+                        contract_name=contract_name.strip(),
+                        contract_type=contract_type,
+                        currency=currency.strip(),
+                        valid_from=str(valid_from),
+                        valid_to=str(valid_to),
+                        payment_terms=payment_terms.strip(),
+                        cancellation_policy=cancellation_policy.strip(),
+                        notes=notes.strip(),
+                    )
+                    st.success("✅ تم حفظ العقد.")
+                    st.experimental_rerun()
+
+        st.markdown("---")
+        st.subheader("قائمة العقود")
+
+        contracts_df = list_contracts()
+        if contracts_df.empty:
+            st.info("لا توجد عقود مسجلة بعد.")
+        else:
+            st.dataframe(contracts_df, use_container_width=True)
+
+
+def page_ai_assistant():
+    render_header()
+    st.title("🤖 AI Assistant — HUMAIN Lifestyle")
+
+    st.write(
+        "اسأل المساعد عن أي شيء يخص السفر إلى السعودية، التخطيط، أو فكرة المنصة نفسها."
+    )
+
+    user_prompt = st.text_area("اكتب سؤالك أو فكرتك هنا", height=200)
+
+    if st.button("💬 رد المساعد", type="primary"):
+        if not user_prompt.strip():
+            st.error("رجاءً اكتب شيئاً أولاً.")
+        else:
+            with st.spinner("جاري توليد الرد بالذكاء الاصطناعي..."):
+                answer = ai_general_chat(user_prompt.strip())
+            st.markdown("### ✍️ رد المساعد:")
+            st.write(answer)
+
+    st.markdown("---")
+    st.caption(
+        "هذا المساعد متصل حالياً بـ OpenAI فقط لأغراض العرض. "
+        "يمكن ربطه لاحقاً بـ HUMAIN ONE / ALLAM أو نماذج أخرى."
+    )
+
 
 def page_flights():
-    track_page_view("Flights")
     render_header()
     st.title("✈️ Flights to KSA — طلب حجز طيران")
-    st.write("نموذج تجريبي لتجميع طلبات حجز تذاكر طيران إلى السعودية.")
+
+    st.write(
+        "نموذج تجريبي لتجميع طلبات حجز تذاكر طيران إلى السعودية. "
+        "لاحقاً يمكن ربطه بنظام طيران (NDC / GDS)."
+    )
+
     with st.form("flights_form"):
         col1, col2 = st.columns(2)
         with col1:
             from_city = st.text_input("مدينة الانطلاق", value="Cairo")
-            to_city = st.selectbox("مدينة الوصول داخل السعودية", ["Riyadh","Jeddah","Makkah (via Jeddah)","Madina","Dammam","NEOM Region"])
-            trip_type = st.selectbox("نوع الرحلة", ["ذهاب وعودة","ذهاب فقط"])
+            to_city = st.selectbox(
+                "مدينة الوصول داخل السعودية",
+                [
+                    "Riyadh",
+                    "Jeddah",
+                    "Makkah (via Jeddah)",
+                    "Madina",
+                    "Dammam",
+                    "NEOM Region",
+                ],
+            )
+            trip_type = st.selectbox("نوع الرحلة", ["ذهاب وعودة", "ذهاب فقط"])
         with col2:
             depart_date = st.date_input("تاريخ الذهاب", value=date.today())
             return_date = st.date_input("تاريخ العودة (إن وجد)", value=date.today())
             passengers = st.number_input("عدد المسافرين", min_value=1, max_value=9, value=1)
 
-        travel_class = st.selectbox("الدرجة", ["اقتصادية","ممتازة","رجال أعمال","أولى"])
-        approx_budget = st.number_input("الميزانية التقريبية (دولار)", min_value=100.0, max_value=20000.0, value=800.0, step=50.0)
+        travel_class = st.selectbox("الدرجة", ["اقتصادية", "ممتازة", "رجال أعمال", "أولى"])
+        approx_budget = st.number_input(
+            "الميزانية التقريبية (دولار)", min_value=100.0, max_value=20000.0,
+            value=800.0, step=50.0
+        )
 
         st.markdown("### بيانات التواصل")
         col3, col4 = st.columns(2)
@@ -1202,6 +1774,7 @@ def page_flights():
             full_to_city = f"{to_city} - {trip_type}, {passengers} pax, {travel_class}, {depart_date}"
             if trip_type == "ذهاب وعودة":
                 full_to_city += f" / عودة: {return_date}"
+
             full_notes = f"[Flights Request] {notes or ''}"
 
             add_booking_request(
@@ -1219,24 +1792,36 @@ def page_flights():
                 itinerary_id=None,
             )
             st.success("✅ تم استلام طلب الطيران، وسيتم التواصل معك عبر البيانات المسجّلة.")
-    footer_company()
+
 
 def page_rail():
-    track_page_view("Rail")
     render_header()
     st.title("🚄 Saudi Rail — طلب حجز قطار")
-    st.write("نموذج تجريبي لتجميع طلبات رحلات القطار داخل المملكة.")
+
+    st.write(
+        "نموذج تجريبي لتجميع طلبات رحلات القطار داخل المملكة (SAR، الحرمين، وغيره مستقبلاً)."
+    )
+
     with st.form("rail_form"):
         col1, col2 = st.columns(2)
         with col1:
-            from_station = st.selectbox("محطة الانطلاق", ["Riyadh","Jeddah","Makkah","Madina","Dammam","Al Khobar","Abha","Tabuk"])
-            to_station = st.selectbox("محطة الوصول", ["Riyadh","Jeddah","Makkah","Madina","Dammam","Al Khobar","Abha","Tabuk"])
+            from_station = st.selectbox(
+                "محطة الانطلاق",
+                ["Riyadh", "Jeddah", "Makkah", "Madina", "Dammam", "Al Khobar", "Abha", "Tabuk"],
+            )
+            to_station = st.selectbox(
+                "محطة الوصول",
+                ["Riyadh", "Jeddah", "Makkah", "Madina", "Dammam", "Al Khobar", "Abha", "Tabuk"],
+            )
         with col2:
             travel_date = st.date_input("تاريخ الرحلة", value=date.today())
             passengers = st.number_input("عدد الركّاب", min_value=1, max_value=9, value=1)
 
-        seat_class = st.selectbox("الدرجة", ["اقتصادية","درجة أولى","أعمال"])
-        approx_budget = st.number_input("الميزانية التقريبية (دولار)", min_value=20.0, max_value=5000.0, value=150.0, step=10.0)
+        seat_class = st.selectbox("الدرجة", ["اقتصادية", "درجة أولى", "أعمال"])
+        approx_budget = st.number_input(
+            "الميزانية التقريبية (دولار)", min_value=20.0, max_value=5000.0,
+            value=150.0, step=10.0
+        )
 
         st.markdown("### بيانات التواصل")
         col3, col4 = st.columns(2)
@@ -1255,6 +1840,7 @@ def page_rail():
         else:
             full_to_city = f"{from_station} → {to_station}, {passengers} pax, {seat_class}, {travel_date}"
             full_notes = f"[Rail Request] {notes or ''}"
+
             add_booking_request(
                 traveller_name=traveller_name.strip(),
                 traveller_email=traveller_email.strip(),
@@ -1270,27 +1856,44 @@ def page_rail():
                 itinerary_id=None,
             )
             st.success("✅ تم استلام طلب القطار، وسيتم التواصل معك عبر البيانات المسجّلة.")
-    footer_company()
+
 
 def page_umrah():
-    track_page_view("Umrah")
     render_header()
     st.title("🕋 Umrah & Hajj — طلب برنامج عمرة/حج")
-    st.write("هذه الصفحة لجمع طلبات برامج العمرة أو الحج.")
+
+    st.write(
+        "هذه الصفحة لجمع طلبات برامج العمرة أو الحج (إقامة + نقل + خدمات إضافية). "
+        "لاحقاً يمكن ربطها بمنصات رسمية (مثل نسك) وشركاء مرخّصين."
+    )
+
     with st.form("umrah_form"):
-        program_type = st.selectbox("نوع البرنامج", ["عمرة","حج (مستقبلاً)","عمرة + سياحة"])
+        program_type = st.selectbox("نوع البرنامج", ["عمرة", "حج (مستقبلاً)", "عمرة + سياحة"])
+
         col1, col2 = st.columns(2)
         with col1:
             from_city = st.text_input("مدينة الانطلاق", value="Cairo")
-            entry_city = st.selectbox("مدينة الدخول للسعودية", ["Jeddah","Makkah (via Jeddah)","Madina","Riyadh"])
+            entry_city = st.selectbox(
+                "مدينة الدخول للسعودية",
+                ["Jeddah", "Makkah (via Jeddah)", "Madina", "Riyadh"],
+            )
             nights_makkah = st.number_input("عدد الليالي في مكة", min_value=0, max_value=30, value=5)
         with col2:
             nights_madina = st.number_input("عدد الليالي في المدينة", min_value=0, max_value=30, value=3)
             total_guests = st.number_input("عدد الأفراد (بالغين + أطفال)", min_value=1, max_value=50, value=2)
 
         st.markdown("### تفضيلات السكن")
-        hotel_pref = st.selectbox("درجة السكن", ["اقتصادي قريب من الحرم","متوسط","5 نجوم قريب جداً من الحرم","VIP / أجنحة خاصة"])
-        approx_budget = st.number_input("الميزانية التقريبية للبرنامج (دولار لكل المجموعة)", min_value=300.0, max_value=50000.0, value=2500.0, step=100.0)
+        hotel_pref = st.selectbox(
+            "درجة السكن",
+            ["اقتصادي قريب من الحرم", "متوسط", "5 نجوم قريب جداً من الحرم", "VIP / أجنحة خاصة"],
+        )
+        approx_budget = st.number_input(
+            "الميزانية التقريبية للبرنامج (دولار لكل المجموعة)",
+            min_value=300.0,
+            max_value=50000.0,
+            value=2500.0,
+            step=100.0,
+        )
 
         st.markdown("### بيانات التواصل")
         col3, col4 = st.columns(2)
@@ -1299,7 +1902,7 @@ def page_umrah():
             traveller_email = st.text_input("البريد الإلكتروني (اختياري)")
         with col4:
             traveller_phone = st.text_input("رقم الهاتف * (مع كود الدولة)")
-            notes = st.text_area("تفاصيل إضافية (مثلاً: تواريخ تقريبية، احتياجات خاصة...)")
+            notes = st.text_area("تفاصيل إضافية (مثلاً: تواريخ تقريبية، احتياجات خاصة، أطفال...)")
 
         submitted = st.form_submit_button("📩 إرسال طلب برنامج العمرة/الحج")
 
@@ -1325,26 +1928,54 @@ def page_umrah():
                 package_id=None,
                 itinerary_id=None,
             )
-            st.success("✅ تم استلام طلب برنامج العمرة/الحج، وسيتم التواصل معك.")
-    footer_company()
+            st.success("✅ تم استلام طلب برنامج العمرة/الحج، وسيتم التواصل معك عبر البيانات المسجّلة.")
+
 
 def page_investor_gateway():
-    track_page_view("InvestorGateway")
     render_header()
     st.title("💼 Invest in KSA — بوابة المستثمرين")
-    st.write("هذه الصفحة مخصصة للمستثمرين وروّاد الأعمال.")
+
+    st.write(
+        "هذه الصفحة مخصصة للمستثمرين وروّاد الأعمال الذين يرغبون في التواجد في المملكة "
+        "(تأسيس شركة، استئجار مكتب، شقة، فتح حساب بنكي، وغيرها)."
+    )
+
     with st.form("invest_form"):
-        profile_type = st.selectbox("نوع العميل", ["فرد","شركة / مؤسسة"])
-        target_city = st.selectbox("المدينة الرئيسية المستهدفة", ["Riyadh","Jeddah","Al Khobar","Dammam","NEOM Region","Diriyah","Other"])
+        profile_type = st.selectbox("نوع العميل", ["فرد", "شركة / مؤسسة"])
+        target_city = st.selectbox(
+            "المدينة الرئيسية المستهدفة",
+            ["Riyadh", "Jeddah", "Al Khobar", "Dammam", "NEOM Region", "Diriyah", "Other"],
+        )
 
         st.markdown("### الخدمات المطلوبة")
-        services = st.multiselect("اختر كل ما ينطبق:", ["تأسيس شركة","فتح سجل تجاري","استئجار مكتب","مساحات عمل مشتركة (Coworking)","استئجار شقة سكنية","فتح حساب بنكي","استشارات قانونية / نظامية","استقدام موظفين / تأشيرات عمل"])
+        services = st.multiselect(
+            "اختر كل ما ينطبق:",
+            [
+                "تأسيس شركة",
+                "فتح سجل تجاري",
+                "استئجار مكتب",
+                "مساحات عمل مشتركة (Coworking)",
+                "استئجار شقة سكنية",
+                "فتح حساب بنكي",
+                "استشارات قانونية / نظامية",
+                "استقدام موظفين / تأشيرات عمل",
+            ],
+        )
 
         col1, col2 = st.columns(2)
         with col1:
-            investment_budget = st.number_input("الميزانية الاستثمارية التقريبية (دولار)", min_value=10000.0, max_value=10000000.0, value=50000.0, step=5000.0)
+            investment_budget = st.number_input(
+                "الميزانية الاستثمارية التقريبية (دولار)",
+                min_value=10000.0,
+                max_value=10000000.0,
+                value=50000.0,
+                step=5000.0,
+            )
         with col2:
-            time_horizon = st.selectbox("الإطار الزمني المتوقع للبدء", ["خلال 3 أشهر","خلال 6 أشهر","خلال سنة","غير محدد"])
+            time_horizon = st.selectbox(
+                "الإطار الزمني المتوقع للبدء",
+                ["خلال 3 أشهر", "خلال 6 أشهر", "خلال سنة", "غير محدد"],
+            )
 
         st.markdown("### بيانات التواصل")
         col3, col4 = st.columns(2)
@@ -1355,7 +1986,10 @@ def page_investor_gateway():
             contact_phone = st.text_input("رقم الهاتف * (مع كود الدولة)")
             company_name = st.text_input("اسم الشركة (إن وجد)")
 
-        notes = st.text_area("تفاصيل إضافية عن المشروع / الاهتمامات", help="مثال: نشاط الشركة الحالي، القطاعات المستهدفة...")
+        notes = st.text_area(
+            "تفاصيل إضافية عن المشروع / الاهتمامات",
+            help="مثال: نشاط الشركة الحالي، القطاعات المستهدفة، نوع العقار المطلوب، حجم الفريق المتوقع...",
+        )
 
         submitted = st.form_submit_button("📩 إرسال طلب استثمار")
 
@@ -1381,24 +2015,77 @@ def page_investor_gateway():
                 package_id=None,
                 itinerary_id=None,
             )
-            st.success("✅ تم استلام طلب المستثمر، وسيتم التواصل معكم.")
-    footer_company()
+            st.success("✅ تم استلام طلب المستثمر، وسيتم التواصل معكم عبر البيانات المسجّلة.")
+
+
+# ==============================
+# 6) صفحات نمط الحياة، الصحة، التعليم/الوظائف
+# ==============================
 
 def page_lifestyle():
-    track_page_view("Lifestyle")
     render_header()
     st.title("🏙️ Local Lifestyle & Services — نمط الحياة والخدمات")
-    st.write("من هنا يقدر المستخدم يطلب أي خدمة يومية داخل المملكة.")
+
+    st.write(
+        "من هنا يقدر المستخدم يطلب أي خدمة يومية داخل المملكة: "
+        "سوبرماركت، عفش منزلي، كافيهات، مراكز رياضية، أنشطة للأطفال، صالونات، وغير ذلك."
+    )
+
     with st.form("lifestyle_form"):
         col1, col2 = st.columns(2)
         with col1:
-            city = st.selectbox("المدينة", ["Riyadh","Jeddah","Makkah","Madina","Dammam","Al Khobar","Abha","Taif","AlUla","Tabuk","NEOM Region","Diriyah","Other"])
-            service_categories = st.multiselect("نوع الخدمات المطلوبة", ["سوبرماركت / هايبرماركت","أثاث منزلي / مكتبي","إلكترونيات وجوالات","مطاعم وكافيهات","صالات رياضية / نوادي","أنشطة أطفال / ترفيه عائلي","سيارات (تأجير / خدمات)","خدمات تنظيف / صيانة منزلية","صالونات وتجميل","خدمات مجتمعية / أندية","أخرى"])
+            city = st.selectbox(
+                "في أي مدينة داخل المملكة تحتاج الخدمة؟",
+                [
+                    "Riyadh",
+                    "Jeddah",
+                    "Makkah",
+                    "Madina",
+                    "Dammam",
+                    "Al Khobar",
+                    "Abha",
+                    "Taif",
+                    "AlUla",
+                    "Tabuk",
+                    "NEOM Region",
+                    "Diriyah",
+                    "Other",
+                ],
+            )
+            service_categories = st.multiselect(
+                "نوع الخدمات المطلوبة",
+                [
+                    "سوبرماركت / هايبرماركت",
+                    "أثاث منزلي / مكتبي",
+                    "إلكترونيات وجوالات",
+                    "مطاعم وكافيهات",
+                    "صالات رياضية / نوادي",
+                    "أنشطة أطفال / ترفيه عائلي",
+                    "سيارات (تأجير / خدمات)",
+                    "خدمات تنظيف / صيانة منزلية",
+                    "صالونات وتجميل",
+                    "خدمات مجتمعية / أندية",
+                    "أخرى",
+                ],
+            )
         with col2:
-            approx_budget = st.number_input("ميزانيتك التقريبية (ريال/دولار)", min_value=0.0, max_value=100000.0, value=0.0, step=100.0)
-            urgency = st.selectbox("متى تحتاج الخدمة؟", ["خلال أسبوع","خلال شهر","أستكشف الخيارات"])
+            approx_budget = st.number_input(
+                "ميزانيتك التقريبية (ريال سعودي إن أمكن)",
+                min_value=0.0,
+                max_value=100000.0,
+                value=0.0,
+                step=100.0,
+            )
+            urgency = st.selectbox(
+                "متى تحتاج هذه الخدمات؟",
+                ["خلال أسبوع", "خلال شهر", "أنا فقط أستكشف الخيارات"],
+            )
 
-        details = st.text_area("اشرح احتياجك بالتفصيل")
+        details = st.text_area(
+            "اشرح احتياجك بالتفصيل",
+            help="مثال: أحتاج شقة مفروشة، أو تجهيز مكتب صغير، أو سوبرماركت قريب من الحي، أو نادي للأطفال...",
+        )
+
         st.markdown("### بيانات التواصل")
         col3, col4 = st.columns(2)
         with col3:
@@ -1432,25 +2119,70 @@ def page_lifestyle():
                 package_id=None,
                 itinerary_id=None,
             )
-            st.success("✅ تم استلام طلبك.")
-    footer_company()
+            st.success("✅ تم استلام طلبك لنمط الحياة داخل المملكة.")
+
 
 def page_health_insurance():
-    track_page_view("HealthInsurance")
     render_header()
     st.title("🩺 Health & Insurance — الصحة والتأمين")
-    st.write("من هنا المستخدم يطلب تأمين صحي، تأمين سفر، أو حجز مستشفى/عيادة داخل المملكة.")
+
+    st.write(
+        "من هنا المستخدم يطلب تأمين صحي، تأمين سفر، أو حجز مستشفى/عيادة داخل المملكة."
+    )
+
     with st.form("health_form"):
-        request_type = st.selectbox("نوع الطلب", ["تأمين صحي فردي","تأمين صحي عائلي","تأمين صحي لشركة / موظفين","تأمين سفر للسعودية","حجز مستشفى / عيادة","فحوصات شاملة (Check-up)","رأي طبي ثانٍ (Second Opinion)"])
+        request_type = st.selectbox(
+            "نوع الطلب",
+            [
+                "تأمين صحي فردي",
+                "تأمين صحي عائلي",
+                "تأمين صحي لشركة / موظفين",
+                "تأمين سفر للسعودية",
+                "حجز مستشفى / عيادة",
+                "فحوصات شاملة (Check-up)",
+                "رأي طبي ثانٍ (Second Opinion)",
+            ],
+        )
+
         col1, col2 = st.columns(2)
         with col1:
-            target_city = st.selectbox("المدينة المستهدفة داخل المملكة", ["Riyadh","Jeddah","Makkah","Madina","Dammam","Al Khobar","Abha","Tabuk","NEOM Region","Any"])
-            coverage_for = st.selectbox("التغطية لـ", ["فرد","عائلة","شركة / فريق عمل"])
+            target_city = st.selectbox(
+                "المدينة المستهدفة داخل المملكة",
+                [
+                    "Riyadh",
+                    "Jeddah",
+                    "Makkah",
+                    "Madina",
+                    "Dammam",
+                    "Al Khobar",
+                    "Abha",
+                    "Tabuk",
+                    "NEOM Region",
+                    "Any",
+                ],
+            )
+            coverage_for = st.selectbox(
+                "التغطية لـ",
+                ["فرد", "عائلة", "شركة / فريق عمل"],
+            )
         with col2:
-            approx_budget = st.number_input("الميزانية التقريبية (دولار أو ريال)", min_value=0.0, max_value=100000.0, value=1000.0, step=100.0)
-            time_frame = st.selectbox("متى تريد بدء التغطية / الخدمة؟", ["خلال شهر","خلال 3 أشهر","غير محدد"])
+            approx_budget = st.number_input(
+                "الميزانية التقريبية (دولار أو ريال)",
+                min_value=0.0,
+                max_value=100000.0,
+                value=1000.0,
+                step=100.0,
+            )
+            time_frame = st.selectbox(
+                "متى تريد بدء التغطية / الخدمة؟",
+                ["خلال شهر", "خلال 3 أشهر", "غير محدد"],
+            )
 
-        details = st.text_area("تفاصيل إضافية عن الاحتياج")
+        details = st.text_area(
+            "تفاصيل إضافية عن الاحتياج الطبي أو التأميني",
+            help="مثال: عدد أفراد العائلة، نوع التأمين المطلوب، تخصص طبي معين، مستشفيات مفضّلة...",
+        )
+
         st.markdown("### بيانات التواصل")
         col3, col4 = st.columns(2)
         with col3:
@@ -1468,6 +2200,7 @@ def page_health_insurance():
         else:
             to_city = f"{request_type} in {target_city}, coverage={coverage_for}, start={time_frame}"
             notes = f"[Health/Insurance Request] {details or ''}"
+
             add_booking_request(
                 traveller_name=name.strip(),
                 traveller_email=email.strip(),
@@ -1482,25 +2215,74 @@ def page_health_insurance():
                 package_id=None,
                 itinerary_id=None,
             )
-            st.success("✅ تم استلام طلب الصحة/التأمين.")
-    footer_company()
+            st.success("✅ تم استلام طلب الصحة/التأمين، وسيتم التواصل معك بالخيارات المناسبة.")
+
 
 def page_education_jobs():
-    track_page_view("EducationJobs")
     render_header()
     st.title("🎓 Education & Jobs — التعليم وفرص العمل")
-    st.write("طلب مساعدة في القبول الجامعي، الكورسات، أو فرص العمل داخل المملكة.")
+
+    st.write(
+        "من هنا المستخدم يطلب مساعدة في القبول الجامعي، الكورسات، أو البحث عن فرص عمل داخل المملكة."
+    )
+
     with st.form("edu_jobs_form"):
-        request_type = st.selectbox("نوع الطلب", ["قبول جامعي في السعودية","كورسات / دورات تدريبية","تعلم اللغة العربية / الإنجليزية","فرص عمل داخل السعودية","تدريب / Internship","منح دراسية / Scholarships"])
+        request_type = st.selectbox(
+            "نوع الطلب",
+            [
+                "قبول جامعي في السعودية",
+                "كورسات / دورات تدريبية",
+                "تعلم اللغة العربية / الإنجليزية",
+                "فرص عمل داخل السعودية",
+                "تدريب / Internship",
+                "منح دراسية / Scholarships",
+            ],
+        )
+
         col1, col2 = st.columns(2)
         with col1:
-            target_city = st.selectbox("المدينة أو أونلاين", ["Riyadh","Jeddah","Makkah","Madina","Dammam","Al Khobar","Online / Remote","Any"])
-            level = st.selectbox("المستوى الحالي", ["خريج ثانوي","طالب جامعي","خريج جامعة","خبرة 1-3 سنوات","خبرة 3-7 سنوات","خبرة أكثر من 7 سنوات"])
+            target_city = st.selectbox(
+                "المدينة أو أونلاين",
+                [
+                    "Riyadh",
+                    "Jeddah",
+                    "Makkah",
+                    "Madina",
+                    "Dammam",
+                    "Al Khobar",
+                    "Online / Remote",
+                    "Any",
+                ],
+            )
+            level = st.selectbox(
+                "المستوى الحالي",
+                [
+                    "خريج ثانوي",
+                    "طالب جامعي",
+                    "خريج جامعة",
+                    "خبرة 1-3 سنوات",
+                    "خبرة 3-7 سنوات",
+                    "خبرة أكثر من 7 سنوات",
+                ],
+            )
         with col2:
-            field = st.text_input("التخصص أو المجال الرئيسي", help="مثال: IT, Business, Engineering...")
-            approx_budget = st.number_input("الميزانية المتاحة للتعليم / الكورسات (إن وجدت)", min_value=0.0, max_value=50000.0, value=0.0, step=100.0)
+            field = st.text_input(
+                "التخصص أو المجال الرئيسي",
+                help="مثال: IT, Business, Engineering, Healthcare...",
+            )
+            approx_budget = st.number_input(
+                "الميزانية المتاحة للتعليم / الكورسات (إن وجدت)",
+                min_value=0.0,
+                max_value=50000.0,
+                value=0.0,
+                step=100.0,
+            )
 
-        details = st.text_area("تفاصيل إضافية")
+        details = st.text_area(
+            "تفاصيل إضافية",
+            help="مثال: الجامعات المفضلة، نوع الوظيفة، الراتب المتوقع، الكورسات المطلوبة...",
+        )
+
         st.markdown("### بيانات التواصل")
         col3, col4 = st.columns(2)
         with col3:
@@ -1518,6 +2300,7 @@ def page_education_jobs():
         else:
             to_city = f"{request_type} in {target_city}, level={level}, field={field or 'N/A'}"
             notes = f"[Education/Jobs Request] {details or ''}"
+
             add_booking_request(
                 traveller_name=name.strip(),
                 traveller_email=email.strip(),
@@ -1532,75 +2315,70 @@ def page_education_jobs():
                 package_id=None,
                 itinerary_id=None,
             )
-            st.success("✅ تم استلام طلب التعليم/الوظائف.")
-    footer_company()
+            st.success("✅ تم استلام طلب التعليم/الوظائف، وسيتم التواصل معك بالفرص المناسبة.")
 
-def page_ai_assistant():
-    track_page_view("AI_Assistant")
+
+# ==============================
+# 7) Leads Dashboard (الجديد)
+# ==============================
+
+def page_leads_dashboard():
+    if not require_admin():
+        return
+
     render_header()
-    st.title("🤖 AI Assistant — HUMAIN Lifestyle")
-    st.write("اسأل المساعد عن أي شيء يخص السفر إلى السعودية، التخطيط، أو فكرة المنصة نفسها.")
+    st.title("📊 Leads Dashboard — لوحة مؤشرات الطلبات")
 
-    user_prompt = st.text_area("اكتب سؤالك أو فكرتك هنا", height=200)
-    if st.button("💬 رد المساعد", type="primary"):
-        if not user_prompt.strip():
-            st.error("رجاءً اكتب شيئاً أولاً.")
-        else:
-            with st.spinner("جاري توليد الرد بالذكاء الاصطناعي..."):
-                answer = ai_general_chat(user_prompt.strip())
-            st.markdown("### ✍️ رد المساعد:")
-            st.write(answer)
+    df = list_booking_requests()
+    if df.empty:
+        st.info("لا توجد طلبات بعد لعرض مؤشرات.")
+        return
+
+    # تجهيز بيانات التاريخ
+    df["created_at_dt"] = pd.to_datetime(df["created_at"], errors="coerce")
+
+    total = len(df)
+    last_7 = df[df["created_at_dt"] >= (pd.Timestamp.utcnow() - pd.Timedelta(days=7))].shape[0]
+    confirmed = df[df["status"] == "Confirmed"].shape[0]
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("إجمالي الطلبات", total)
+    c2.metric("طلبات آخر 7 أيام", last_7)
+    c3.metric("طلبات مؤكدة", confirmed)
+
     st.markdown("---")
-    st.caption("هذا المساعد متصل حالياً بـ OpenAI فقط لأغراض العرض.")
-    footer_company()
+    st.subheader("الطلبات حسب المصدر (Source)")
+    source_counts = df["source"].fillna("N/A").value_counts().reset_index()
+    source_counts.columns = ["source", "count"]
+    st.bar_chart(source_counts.set_index("source"))
+
+    st.subheader("الطلبات حسب الحالة (Status)")
+    status_counts = df["status"].fillna("N/A").value_counts().reset_index()
+    status_counts.columns = ["status", "count"]
+    st.bar_chart(status_counts.set_index("status"))
+
+    st.markdown("---")
+    st.subheader("كل البيانات (للتصدير / التحليل)")
+    df_export = df.drop(columns=["created_at_dt"])
+    st.dataframe(df_export, use_container_width=True, hide_index=True)
+
+    csv = df_export.to_csv(index=False).encode("utf-8-sig")
+    st.download_button(
+        "⬇️ تحميل ملف CSV للـ Leads",
+        csv,
+        "humain_leads.csv",
+        "text/csv",
+    )
+
 
 # ==============================
-# 6) توجيه الصفحات + صلاحيات + خروج + تتبّع
+# 8) توجيه الصفحات + Login + Footer
 # ==============================
+
+# أولاً: إجبار تسجيل الدخول
+require_login()
+
+# Sidebar
 st.sidebar.title("HUMAIN Lifestyle 🌍")
 
-PAGES = {
-    "🏠 Home": page_home,
-    "🧭 Trip Planner (B2C)": page_trip_planner,
-    "🎟️ Experiences & Activities": page_activities,
-    "📝 Saved Itineraries": page_itineraries,
-    "📦 Packages / Programs": page_packages,
-    "✈️ Flights to KSA": page_flights,
-    "🚄 Saudi Rail": page_rail,
-    "🕋 Umrah & Hajj": page_umrah,
-    "💼 Invest in KSA": page_investor_gateway,
-    "🏙️ Local Lifestyle & Services": page_lifestyle,
-    "🩺 Health & Insurance": page_health_insurance,
-    "🎓 Education & Jobs": page_education_jobs,
-    "🤖 AI Assistant": page_ai_assistant,
-    # Admin-only
-    "📥 Booking Requests (Admin)": page_booking_requests,
-    "🏨 Hotels & Contracts (Admin)": page_hotels_admin,
-}
-
-role = st.session_state.get("AUTH_ROLE", "user")
-PUBLIC_LABELS = [
-    "🏠 Home",
-    "🧭 Trip Planner (B2C)",
-    "🎟️ Experiences & Activities",
-    "📝 Saved Itineraries",
-    "📦 Packages / Programs",
-    "✈️ Flights to KSA",
-    "🚄 Saudi Rail",
-    "🕋 Umrah & Hajj",
-    "💼 Invest in KSA",
-    "🏙️ Local Lifestyle & Services",
-    "🩺 Health & Insurance",
-    "🎓 Education & Jobs",
-    "🤖 AI Assistant",
-]
-ADMIN_ONLY = ["📥 Booking Requests (Admin)", "🏨 Hotels & Contracts (Admin)"]
-labels = PUBLIC_LABELS + (ADMIN_ONLY if role in ("admin",) else [])
-
-page = st.sidebar.radio(t("اختر الصفحة", "Choose a page"), labels)
-
-# زر تسجيل الخروج في الشريط الجانبي
-signout_button()
-
-# استدعاء الصفحة
-PAGES[page]()
+with st.sidebar
