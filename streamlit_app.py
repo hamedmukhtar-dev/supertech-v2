@@ -2246,23 +2246,7 @@ def page_education_jobs():
 
 st.sidebar.title("HUMAIN Lifestyle 🌍")
 
-# 🤖 HUMAIN AI Copilot في الـ Sidebar (متاح من أي صفحة)
-with st.sidebar.expander("🤖 HUMAIN AI Copilot", expanded=False):
-    ai_prompt = st.text_area(
-        "اكتب سؤالك للمساعد الذكي",
-        key="sidebar_ai_prompt",
-        height=120,
-    )
-    if st.button("💬 اسأل HUMAIN AI", key="sidebar_ai_btn"):
-        if not ai_prompt.strip():
-            st.warning("اكتب سؤالك أولاً.")
-        else:
-            with st.spinner("جاري توليد رد HUMAIN AI..."):
-                answer = ai_general_chat(ai_prompt.strip())
-            st.markdown("**رد HUMAIN AI:**")
-            st.write(answer)
-
-# قائمة الصفحات
+# قائمة الصفحات في المنصّة
 page = st.sidebar.radio(
     "اختر الصفحة",
     [
@@ -2284,7 +2268,41 @@ page = st.sidebar.radio(
     ],
 )
 
-# توجيه الصفحات
+# 🤖 HUMAIN AI Copilot (Sidebar) — شغّال في كل الصفحات
+with st.sidebar.expander("🤖 HUMAIN AI Copilot", expanded=False):
+    ai_prompt = st.text_area(
+        "اكتب سؤالك للمساعد الذكي (مرتبط بالصفحة الحالية)",
+        key="sidebar_ai_prompt",
+        height=120,
+    )
+    if st.button("💬 اسأل HUMAIN AI", key="sidebar_ai_btn"):
+        if not ai_prompt.strip():
+            st.warning("اكتب سؤالك أولاً.")
+        else:
+            # نرسل للمساعد سياق عن الصفحة الحالية + سؤال المستخدم
+            contextual_prompt = f"""
+أنت مساعد HUMAIN AI داخل منصة HUMAIN Lifestyle.
+
+الصفحة الحالية في الواجهة هي: "{page}"
+
+قدّم إجابة قصيرة وعملية مرتبطة بهذه الصفحة قدر الإمكان:
+- لو الصفحة Trip Planner → ساعد في تحسين خطة الرحلة أو اقتراح أنشطة.
+- لو الصفحة Umrah & Hajj → وضّح أفكار برامج عمرة/حج وخيارات السكن/النقل.
+- لو الصفحة Invest in KSA → ساعد على فهم خطوات الاستثمار والخدمات المطلوبة.
+- لو الصفحة Local Lifestyle → اقترح خدمات/أماكن داخل المدن السعودية.
+- لو الصفحة Health & Insurance → وضّح خيارات التأمين أو المستشفيات.
+- لو الصفحة Education & Jobs → ساعد في التعليم/الوظائف داخل المملكة.
+- لو صفحة Admin (Booking Requests / Hotels) → وضّح كيف تُستخدم الشاشة إدارياً.
+
+سؤال المستخدم:
+{ai_prompt.strip()}
+"""
+            with st.spinner("جاري توليد رد HUMAIN AI..."):
+                answer = ai_general_chat(contextual_prompt)
+            st.markdown("**رد HUMAIN AI:**")
+            st.write(answer)
+
+# توجيه الصفحات حسب الاختيار
 if page.startswith("🏠"):
     page_home()
 elif page.startswith("🧭"):
@@ -2315,3 +2333,4 @@ elif page.startswith("🏨"):
     page_hotels_admin()
 elif page.startswith("🤖"):
     page_ai_assistant()
+
