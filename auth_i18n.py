@@ -6,8 +6,6 @@ from typing import Optional, Tuple
 from pathlib import Path
 import streamlit as st
 
-# ملاحظة: لتفادي مشاكل bcrypt على Render، هنستخدم SHA-256 (للعرض فقط)
-# لو حاب ترجع لـ passlib لاحقاً ممكن بس بعد تثبيت backends.
 DB_PATH_DEFAULT = "humain_lifestyle.db"
 
 @contextmanager
@@ -42,8 +40,7 @@ def ensure_auth_tables(db_path: str = DB_PATH_DEFAULT):
         """)
         c.commit()
 
-def _now():
-    return datetime.utcnow().isoformat()
+def _now(): return datetime.utcnow().isoformat()
 
 def _audit(action: str, user_email: Optional[str] = None, meta: str = ""):
     try:
@@ -57,11 +54,9 @@ def _audit(action: str, user_email: Optional[str] = None, meta: str = ""):
     except Exception:
         pass
 
-# -------- hashing (demo-safe) --------
+# --- Hashing (ديمو آمن وبسيط): SHA-256 بدلاً من bcrypt لتفادي مشاكل باكإند على Render
 def _hash_pw(pw: str) -> str:
-    # ديمو فقط (SHA256). في الإنتاج استعمل bcrypt/pbkdf2.
     return hashlib.sha256(pw.encode("utf-8")).hexdigest()
-
 def _verify_pw(pw: str, hashed: str) -> bool:
     return hmac.compare_digest(hashlib.sha256(pw.encode("utf-8")).hexdigest(), hashed)
 
@@ -89,31 +84,25 @@ def touch_last_login(email: str):
         cur.execute("UPDATE users SET last_login_at=? WHERE email=?", (_now(), email.lower().strip()))
         c.commit()
 
-# -------- i18n --------
+# --- i18n
 LANGS = {"ar": "العربية", "en": "English"}
-def get_lang() -> str:
-    return st.session_state.get("LANG", "ar")
-def set_lang(lang: str):
-    st.session_state["LANG"] = "ar" if lang not in LANGS else lang
-def t(ar: str, en: str) -> str:
-    return ar if get_lang() == "ar" else en
+def get_lang() -> str: return st.session_state.get("LANG", "ar")
+def set_lang(lang: str): st.session_state["LANG"] = lang if lang in LANGS else "ar"
+def t(ar: str, en: str) -> str: return ar if get_lang() == "ar" else en
 
-# -------- defaults (seed) --------
+# --- Seed
 def setup_defaults():
     ensure_auth_tables(DB_PATH_DEFAULT)
-    # يمكن تعديل كلمات المرور من ENV إن رغبت
     create_user("admin@demo.local", os.getenv("ADMIN_DEMO_PW", "admin123"), role="admin")
     create_user("demo@demo.local", os.getenv("DEMO_DEMO_PW", "demo123"), role="demo")
     create_user("hamed.mukhtar@daral-sd.com", os.getenv("DEFAULT_USER_PASSWORD", "Daral@2025"), role="admin")
 
-# -------- UI helpers --------
+# --- UI helpers
 def _read_logo_as_base64() -> Optional[str]:
-    # نقرأ اللوغو كـ base64 لضمان ظهوره حتى داخل HTML
-    logo_path = Path("assets/logo.png")
-    if logo_path.exists():
+    p = Path("assets/logo.png")
+    if p.exists():
         try:
-            data = logo_path.read_bytes()
-            return base64.b64encode(data).decode("utf-8")
+            return base64.b64encode(p.read_bytes()).decode("utf-8")
         except Exception:
             return None
     return None
@@ -123,83 +112,34 @@ def _login_css():
         """
 <style>
 :root{
-  --gold:#D4AF37;
-  --green:#006C35;
-  --green2:#004D24;
-  --bg:#0B0F0D;
-  --card:#111418;
-  --text:#EDEDED;
-  --muted:#9AA1A7;
+  --gold:#D4AF37; --green:#006C35; --bg:#0B0F0D;
+  --card:#111418; --text:#EDEDED; --muted:#9AA1A7;
 }
 html, body, .stApp { background: var(--bg) !important; color: var(--text) !important; }
-.humain-wrap{
-  min-height: 100vh;
-  display:flex; align-items:center; justify-content:center;
-  padding: 24px;
+.humain-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
   background: radial-gradient(1000px 500px at 10% 10%, rgba(0,108,53,.15), transparent),
-              radial-gradient(800px 400px at 90% 20%, rgba(212,175,55,.10), transparent);
-}
-.humain-card{
-  width: min(920px, 94vw);
-  background: linear-gradient(180deg, rgba(17,20,24,.95), rgba(17,20,24,.92));
-  border: 1px solid rgba(212,175,55,.28);
-  box-shadow: 0 10px 40px rgba(0,0,0,.45), inset 0 0 80px rgba(212,175,55,.04);
-  border-radius: 18px;
-  padding: 22px 22px 16px;
-}
-.h-header{
-  display:flex; align-items:center; gap:16px; padding:8px 4px 16px; border-bottom:1px dashed rgba(212,175,55,.3);
-}
-.h-logo{
-  height:54px; width:54px; border-radius:12px; border:1px solid var(--gold);
-  background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden;
-}
-.h-title{
-  line-height:1.15;
-}
+              radial-gradient(800px 400px at 90% 20%, rgba(212,175,55,.10), transparent);}
+.humain-card{ width:min(920px,94vw); background:linear-gradient(180deg, rgba(17,20,24,.95), rgba(17,20,24,.92));
+  border:1px solid rgba(212,175,55,.28); box-shadow:0 10px 40px rgba(0,0,0,.45), inset 0 0 80px rgba(212,175,55,.04);
+  border-radius:18px; padding:22px 22px 16px;}
+.h-header{ display:flex; align-items:center; gap:16px; padding:8px 4px 16px; border-bottom:1px dashed rgba(212,175,55,.3);}
+.h-logo{ height:54px; width:54px; border-radius:12px; border:1px solid var(--gold); background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center;}
 .h-title h1{ margin:0; font-size:1.55rem; color:var(--gold); font-weight:800; letter-spacing:.2px;}
 .h-title p{ margin:2px 0 0; color:var(--muted); font-size:.95rem;}
-.h-body{
-  display:grid; gap:18px; grid-template-columns: 1.1fr .9fr; padding-top:18px;
-}
-.h-left{
-  padding-right:12px;
-}
-.h-legal{
-  border:1px solid rgba(212,175,55,.22);
-  background:linear-gradient(180deg, rgba(212,175,55,.05), rgba(0,0,0,.0));
-  border-radius:12px; padding:14px; color:#D8D8D8; font-size:.94rem;
-}
-.h-legal strong{ color:var(--gold); }
-.h-divider{ height:1px; background:rgba(212,175,55,.22); margin:14px 0; }
-
-.h-right{
-  border-left:1px dashed rgba(212,175,55,.25);
-  padding-left:14px;
-}
-
-.h-form{
-  border:1px solid rgba(212,175,55,.22);
-  background:linear-gradient(180deg, rgba(0,108,53,.10), rgba(0,0,0,.10));
-  border-radius:12px; padding:16px;
-}
-.h-form h3{ margin-top:0; color:var(--gold); }
-.h-foot{
-  margin-top:12px; padding-top:12px; border-top:1px dashed rgba(212,175,55,.25);
-  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-  color:#CFCFCF; font-size:.9rem;
-}
-.h-company{
-  display:flex; gap:10px; align-items:center;
-}
-.h-company .mini-logo{
-  height:28px; width:28px; border-radius:8px; border:1px solid var(--gold); background:#fff; overflow:hidden;
-}
-.h-muted{ color:var(--muted); }
-@media (max-width: 860px){
-  .h-body{ grid-template-columns:1fr; }
-  .h-right{ border-left:none; padding-left:0; }
-}
+.h-body{ display:grid; gap:18px; grid-template-columns:1.1fr .9fr; padding-top:18px;}
+.h-left{ padding-right:12px;}
+.h-legal{ border:1px solid rgba(212,175,55,.22); background:linear-gradient(180deg, rgba(212,175,55,.05), rgba(0,0,0,.0));
+  border-radius:12px; padding:14px; color:#D8D8D8; font-size:.94rem;}
+.h-legal strong{ color:var(--gold);}
+.h-divider{ height:1px; background:rgba(212,175,55,.22); margin:14px 0;}
+.h-right{ border-left:1px dashed rgba(212,175,55,.25); padding-left:14px;}
+.h-form{ border:1px solid rgba(212,175,55,.22); background:linear-gradient(180deg, rgba(0,108,53,.10), rgba(0,0,0,.10)); border-radius:12px; padding:16px;}
+.h-form h3{ margin-top:0; color:var(--gold);}
+.h-foot{ margin-top:12px; padding-top:12px; border-top:1px dashed rgba(212,175,55,.25); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#CFCFCF; font-size:.9rem;}
+.h-company{ display:flex; gap:10px; align-items:center;}
+.h-company .mini-logo{ height:28px; width:28px; border-radius:8px; border:1px solid var(--gold); background:#fff; overflow:hidden;}
+.h-muted{ color:var(--muted);}
+@media (max-width: 860px){ .h-body{ grid-template-columns:1fr;} .h-right{ border-left:none; padding-left:0;} }
 </style>
         """,
         unsafe_allow_html=True
@@ -224,9 +164,7 @@ def signout_button():
 def track_page_view(page_name: str):
     _audit("page_view", st.session_state.get("AUTH_EMAIL"), page_name)
 
-# -------- LOGIN GATE (FULL LANDING) --------
 def login_gate() -> bool:
-    # لو بالفعل داخلين
     if st.session_state.get("AUTH_EMAIL"):
         return True
 
@@ -235,15 +173,14 @@ def login_gate() -> bool:
 
     st.markdown('<div class="humain-wrap"><div class="humain-card">', unsafe_allow_html=True)
 
-    # Header (Logo + Title)
+    # Header
     st.markdown('<div class="h-header">', unsafe_allow_html=True)
     if logo_b64:
         st.markdown(f'<div class="h-logo"><img src="data:image/png;base64,{logo_b64}" alt="Logo" style="height:100%;width:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="h-logo"><span style="color:#333;">Logo</span></div>', unsafe_allow_html=True)
-
     st.markdown(
-        f"""
+        """
         <div class="h-title">
           <h1>HUMAIN Lifestyle — Live Demo</h1>
           <p>Dar AL Khartoum Travel And Tourism CO LTD — <span class="h-muted">شركة دار الخرطوم للسفر والسياحة المحدودة</span></p>
@@ -251,12 +188,12 @@ def login_gate() -> bool:
         """,
         unsafe_allow_html=True
     )
-    st.markdown('</div>', unsafe_allow_html=True)  # /h-header
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Body (Left: legal & brand, Right: language + auth)
+    # Body
     st.markdown('<div class="h-body">', unsafe_allow_html=True)
 
-    # LEFT
+    # LEFT (Legal / Brand)
     st.markdown('<div class="h-left">', unsafe_allow_html=True)
     st.markdown(
         f"""
@@ -273,9 +210,9 @@ def login_gate() -> bool:
         """,
         unsafe_allow_html=True
     )
-    st.markdown('</div>', unsafe_allow_html=True)  # /h-left
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # RIGHT
+    # RIGHT (Language + Auth)
     st.markdown('<div class="h-right">', unsafe_allow_html=True)
     with st.container():
         st.markdown('<div class="h-form">', unsafe_allow_html=True)
@@ -315,12 +252,11 @@ def login_gate() -> bool:
                     _audit("signup", n_email, "")
                     st.success(t("تم إنشاء الحساب. الرجاء تسجيل الدخول.", "Account created. Please sign in."))
 
-        st.markdown('</div>', unsafe_allow_html=True)  # /h-form
-
+        st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)  # /h-right
     st.markdown('</div>', unsafe_allow_html=True)  # /h-body
 
-    # FOOT
+    # Footer
     st.markdown(
         f"""
         <div class="h-foot">
