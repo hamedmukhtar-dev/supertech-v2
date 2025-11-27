@@ -1,4 +1,4 @@
-# layout_header.py
+# layout_header.py — Light header (no dark background)
 import base64
 from pathlib import Path
 import streamlit as st
@@ -13,38 +13,35 @@ def _logo_b64():
     return None
 
 def render_header():
-    b64 = _logo_b64()
+    logo = _logo_b64()
     st.markdown(
         """
 <style>
-.hdr{
-  background:linear-gradient(90deg,#006C35,#004D24);
-  color:white; padding:18px 16px; border-bottom:4px solid #D4AF37;
-  border-radius:0 0 14px 14px; box-shadow:0 4px 15px rgba(0,0,0,.18);
+.header-wrap{
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; margin-bottom:8px;
+  background:#ffffff; border:1px solid #E6E8EF; border-radius:14px;
 }
-.hdr-wrap{ display:flex; gap:12px; align-items:center; }
-.hdr h1{ margin:0; font-size:1.6rem; font-weight:900; letter-spacing:.3px; }
-.hdr p{ margin:4px 0 0; opacity:.95; }
-.hdr-logo{
-  height:44px; width:44px; border-radius:10px; border:1px solid #D4AF37;
-  background:white; overflow:hidden; display:flex; align-items:center; justify-content:center;
-}
+.header-logo{ height:40px; width:40px; border-radius:10px; border:1px solid #C8A646; overflow:hidden; background:#fff; }
+.header-title{ line-height:1.2; }
+.header-title h2{ margin:0; font-size:1.15rem; font-weight:800; color:#1a1f2a; }
+.header-title p{ margin:2px 0 0; color:#677181; font-size:.92rem; }
 </style>
         """,
         unsafe_allow_html=True
     )
-    st.markdown('<div class="hdr"><div class="hdr-wrap">', unsafe_allow_html=True)
-    if b64:
-        st.markdown(f'<div class="hdr-logo"><img src="data:image/png;base64,{b64}" style="height:100%;width:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="header-wrap">', unsafe_allow_html=True)
+    if logo:
+        st.markdown(f'<div class="header-logo"><img src="data:image/png;base64,{logo}" style="height:100%;width:100%;object-fit:cover;" /></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="hdr-logo"><span style="color:#333;">Logo</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="header-logo"></div>', unsafe_allow_html=True)
     st.markdown(
         """
-        <div>
-          <h1>HUMAIN Lifestyle</h1>
-          <p>Your Gateway to The Kingdom of Saudi Arabia 🇸🇦</p>
+        <div class="header-title">
+          <h2>HUMAIN Lifestyle — Live Demo</h2>
+          <p>Gateway to KSA • Travel • Umrah • Investors</p>
         </div>
         """,
         unsafe_allow_html=True
     )
-    st.markdown('</div></div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
