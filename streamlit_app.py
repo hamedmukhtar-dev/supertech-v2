@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
-from layout_header import render_header  # <-- الهيدر الملكي
+from layout_header import render_header  # الهيدر الأخضر الذهبي
 
 # ==============================
 # 1) إعداد عام للتطبيق
@@ -161,20 +161,247 @@ def init_db():
 
         conn.commit()
 
-        # تعبئة أولية للأنشطة لو الجدول فاضي
+        # لو ما في أنشطة، نضيف كتالوج أولي
         cur.execute("SELECT COUNT(*) FROM activities;")
         count = cur.fetchone()[0]
         if count == 0:
             seed_activities = [
-                # مثال واحد فقط (تقدر تضيف زي ما تحب لاحقاً)
+                # Riyadh
                 (
                     "Riyadh",
                     "Boulevard City Evening",
                     "Entertainment",
-                    "زيارة بوليفارد سيتي مع مطاعم وعروض حية وتجارب ترفيهية.",
+                    "زيارة بوليفارد سيتي مع مطاعم وعروض حية وتجارب ترفيهية مناسبة للعائلات والشباب.",
                     150.0,
                     "Riyadh Season Partner",
                     "https://example.com/riyadh-boulevard-city",
+                ),
+                (
+                    "Riyadh",
+                    "Boulevard World Discovery",
+                    "Entertainment",
+                    "تجربة عوالم وثقافات مختلفة في منطقة ترفيهية ضخمة مع فعاليات وعروض موسمية.",
+                    180.0,
+                    "Riyadh Season Partner",
+                    "https://example.com/riyadh-boulevard-world",
+                ),
+                (
+                    "Riyadh",
+                    "Riyadh Desert Safari & Dunes",
+                    "Adventure",
+                    "رحلة سفاري في صحراء الرياض مع رمال، دبابات، وجلسة بدوية مع عشاء تقليدي.",
+                    220.0,
+                    "Desert Operator",
+                    "https://example.com/riyadh-dunes",
+                ),
+                (
+                    "Riyadh",
+                    "Riyadh Zoo Family Day",
+                    "Family",
+                    "يوم عائلي في حديقة الحيوانات مع أنشطة للأطفال ومناطق ألعاب ومطاعم.",
+                    90.0,
+                    "Family Operator",
+                    "https://example.com/riyadh-zoo",
+                ),
+                (
+                    "Riyadh",
+                    "CityWalk Riyadh Night",
+                    "Leisure",
+                    "جولة مسائية في CityWalk مع مطاعم وكافيهات وفعاليات موسمية مميزة.",
+                    110.0,
+                    "CityWalk Partner",
+                    "https://example.com/riyadh-citywalk",
+                ),
+
+                # Jeddah
+                (
+                    "Jeddah",
+                    "Jeddah Waterfront Evening Walk",
+                    "Leisure",
+                    "نزهة مسائية على واجهة جدة البحرية مع مطاعم بحرية وجلسات خارجية.",
+                    80.0,
+                    "Local Guide",
+                    "https://example.com/jeddah-waterfront",
+                ),
+                (
+                    "Jeddah",
+                    "Red Sea Boat Trip",
+                    "Adventure",
+                    "رحلة قارب في البحر الأحمر مع سباحة أو سنوركلينج وجلسة بحرية.",
+                    260.0,
+                    "Red Sea Operator",
+                    "https://example.com/jeddah-redsea-boat",
+                ),
+                (
+                    "Jeddah",
+                    "Historic Jeddah (Al Balad) Tour",
+                    "Culture",
+                    "جولة في جدة التاريخية مع زيارة البيوت القديمة والأسواق الشعبية.",
+                    130.0,
+                    "Heritage Guide",
+                    "https://example.com/jeddah-albalad",
+                ),
+
+                # Makkah
+                (
+                    "Makkah",
+                    "Umrah Program & City Tour",
+                    "Religious",
+                    "برنامج عمرة كامل مع نقل وإرشاد وزيارة لبعض المعالم في مكة المكرمة.",
+                    230.0,
+                    "Umrah Partner",
+                    "https://example.com/makkah-umrah",
+                ),
+                (
+                    "Makkah",
+                    "Makkah Historical Sites Tour",
+                    "Religious",
+                    "زيارة بعض المواقع التاريخية المرتبطة بالسيرة النبوية حول مكة المكرمة.",
+                    150.0,
+                    "Religious Guide",
+                    "https://example.com/makkah-historical",
+                ),
+
+                # Madina
+                (
+                    "Madina",
+                    "Ziyarah of Madina Landmarks",
+                    "Religious",
+                    "زيارة عدد من المساجد والمعالم التاريخية في المدينة المنورة مع مرشد.",
+                    160.0,
+                    "Ziyarah Partner",
+                    "https://example.com/madina-ziyarah",
+                ),
+                (
+                    "Madina",
+                    "Madina Night Markets Walk",
+                    "Leisure",
+                    "جولة في الأسواق والمناطق التجارية القريبة من المسجد النبوي.",
+                    70.0,
+                    "Local Guide",
+                    "https://example.com/madina-markets",
+                ),
+
+                # Dammam & Al Khobar
+                (
+                    "Dammam",
+                    "Dammam Corniche & Park",
+                    "Leisure",
+                    "جلسة على كورنيش الدمام مع حدائق وألعاب أطفال ومطاعم مطلة على الخليج.",
+                    60.0,
+                    "Local Operator",
+                    "https://example.com/dammam-corniche",
+                ),
+                (
+                    "Al Khobar",
+                    "Al Khobar Waterfront & Skywalk",
+                    "Leisure",
+                    "نزهة في واجهة الخبر البحرية مع ممشى وسكاي ووك ومقاهي ومطاعم مميزة.",
+                    75.0,
+                    "Local Operator",
+                    "https://example.com/khobar-waterfront",
+                ),
+                (
+                    "Al Khobar",
+                    "Family Entertainment Center Visit",
+                    "Family",
+                    "زيارة مركز ترفيهي مغلق للعائلات مع ألعاب إلكترونية وجلسات مريحة.",
+                    95.0,
+                    "Entertainment Center",
+                    "https://example.com/khobar-family-center",
+                ),
+
+                # Abha
+                (
+                    "Abha",
+                    "Abha Mountains & Cable Car",
+                    "Nature",
+                    "تجربة العربات المعلقة مع إطلالات على الجبال والقرى في مدينة أبها.",
+                    200.0,
+                    "Abha Operator",
+                    "https://example.com/abha-cablecar",
+                ),
+                (
+                    "Abha",
+                    "Rijal Almaa Heritage Village Tour",
+                    "Culture",
+                    "زيارة قرية رجال ألمع التراثية واستكشاف الطراز المعماري الفريد.",
+                    170.0,
+                    "Heritage Guide",
+                    "https://example.com/abha-rijal-almaa",
+                ),
+
+                # Taif
+                (
+                    "Taif",
+                    "Taif Rose Farms Visit",
+                    "Culture",
+                    "زيارة مزارع الورد الطائفي والتعرف على صناعة ماء الورد والعطور.",
+                    140.0,
+                    "Rose Farm Partner",
+                    "https://example.com/taif-roses",
+                ),
+                (
+                    "Taif",
+                    "Taif Cable Car & Mountains",
+                    "Nature",
+                    "جولة في جبال الهدا أو الشفا مع العربات المعلقة وإطلالات جميلة.",
+                    180.0,
+                    "Taif Operator",
+                    "https://example.com/taif-cablecar",
+                ),
+
+                # AlUla
+                (
+                    "AlUla",
+                    "AlUla Heritage & Nature Tour",
+                    "Nature",
+                    "جولة في المواقع الأثرية والطبيعية بالعلا مع مرشد محلي.",
+                    350.0,
+                    "AlUla Partner",
+                    "https://example.com/alula-heritage",
+                ),
+                (
+                    "AlUla",
+                    "AlUla Stargazing Night",
+                    "Adventure",
+                    "ليلة تحت النجوم في صحراء العلا مع جلسة بدوية وشرح عن السماء.",
+                    320.0,
+                    "Stargazing Operator",
+                    "https://example.com/alula-stargazing",
+                ),
+
+                # Tabuk
+                (
+                    "Tabuk",
+                    "Tabuk Desert & Historical Tour",
+                    "Adventure",
+                    "زيارة بعض المواقع الطبيعية والتاريخية حول تبوك مع جولة في الصحراء.",
+                    260.0,
+                    "Tabuk Operator",
+                    "https://example.com/tabuk-desert",
+                ),
+
+                # NEOM
+                (
+                    "NEOM Region",
+                    "NEOM Future Discovery Tour (Concept)",
+                    "Futuristic",
+                    "تجربة تعريفية برؤية نيوم وزيارة بعض المواقع المفتوحة حالياً حسب الأنظمة.",
+                    400.0,
+                    "NEOM Experience",
+                    "https://example.com/neom-discovery",
+                ),
+
+                # Diriyah
+                (
+                    "Diriyah",
+                    "Diriyah Heritage District Walk",
+                    "Culture",
+                    "جولة في منطقة الدرعية التاريخية مع مسار للمشاة ومقاهي ومتاحف.",
+                    160.0,
+                    "Diriyah Operator",
+                    "https://example.com/diriyah-heritage",
                 ),
             ]
             cur.executemany(
@@ -1033,7 +1260,7 @@ def page_packages():
                 pkg_notes = st.text_area("ملاحظات إضافية (اختياري)")
 
                 st.markdown("#### خطة الرحلة المرتبطة (للمراجعة)")
-                st.code(default_plan_text أو "لا توجد خطة محفوظة.", language="markdown")
+                st.code(default_plan_text or "لا توجد خطة محفوظة.", language="markdown")
 
                 submitted_pkg = st.form_submit_button("💾 حفظ البرنامج")
 
@@ -1127,7 +1354,7 @@ def page_packages():
 
             st.markdown("---")
             st.markdown("#### الخطة التفصيلية (من خطة الرحلة الأصلية)")
-            st.write(details.get("ai_plan_text") أو "لا توجد خطة مرتبطة.")
+            st.write(details.get("ai_plan_text") or "لا توجد خطة مرتبطة.")
 
 
 def page_booking_requests():
@@ -1200,7 +1427,7 @@ def page_booking_requests():
             submitted_req = st.form_submit_button("💾 حفظ الطلب")
 
         if submitted_req:
-            if not traveller_name.strip() أو not traveller_phone.strip():
+            if not traveller_name.strip() or not traveller_phone.strip():
                 st.error("اسم العميل ورقم الهاتف مطلوبان.")
             else:
                 add_booking_request(
