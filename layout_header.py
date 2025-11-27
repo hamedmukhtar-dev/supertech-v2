@@ -1,37 +1,34 @@
 import streamlit as st
+from pathlib import Path
 
-def render_header():
-    header_style = """
-        <style>
-            .humain-header {
-                background: linear-gradient(90deg, #006C35, #004D24);
-                color: white;
-                text-align: center;
-                padding: 25px;
-                border-bottom: 4px solid #D4AF37;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.18);
-                border-radius: 0 0 14px 14px;
-            }
-            .humain-header h1 {
-                font-size: 2.2rem;
-                font-weight: 800;
-                margin: 0;
-            }
-            .humain-header p {
-                font-size: 1rem;
-                opacity: .95;
-            }
-        </style>
-    """
+def render_header(lang="ar"):
+    # تحميل الشعار
+    logo_path = Path("assets/logo.png")
+    if logo_path.exists():
+        st.image(str(logo_path), width=110)
+    else:
+        st.write("⚠️ Logo not found")
 
-    st.markdown(header_style, unsafe_allow_html=True)
+    # الترجمة
+    if lang == "ar":
+        title = "منصّة HUMAIN Lifestyle الذكية"
+        slogan = "نقدّم حلول سفر وسياحة مبتكرة تجمع بين التقنية الحديثة والخبرة العميقة، لنصنع تجربة سفر آمنة، مريحة، وسلسة للمسافر."
+    else:
+        title = "HUMAIN Lifestyle Smart Platform"
+        slogan = "We provide innovative travel solutions combining technology and deep expertise to deliver a safe, smooth, and modern travel experience."
 
+    # عنوان المنصّة
     st.markdown(
-        """
-        <div class="humain-header">
-            <h1>🌍 HUMAIN Lifestyle</h1>
-            <p>Your Gateway to The Kingdom of Saudi Arabia 🇸🇦</p>
+        f"""
+        <div style='text-align:right; padding:10px;'>
+            <h1 style='color:#0f5b45; margin-bottom:-10px;'>{title}</h1>
+            <p style='color:#444;'>{slogan}</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    # زر اختيار اللغة
+    col1, col2 = st.columns([6, 1])
+    with col2:
+        st.session_state.lang = st.selectbox("🌐", ["العربية", "English"], index=0)
