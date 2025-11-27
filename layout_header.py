@@ -35,3 +35,13 @@ def render_header():
         """,
         unsafe_allow_html=True,
     )
+    # --- Company badge (logo + names) ---
+    company_html = """
+    <div style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px;">
+        <img src="assets/logo.png" alt="Company Logo" style="height:40px;border-radius:8px;border:1px solid #D4AF37;padding:4px;background:white" />
+        <div style="line-height:1.2">
+            <div style="font-weight:800;">Dar AL Khartoum Travel And Tourism CO LTD</div>
+            <div style="opacity:.9;">شركة دار الخرطوم للسفر والسياحة المحدودة</div>
+        </div>
+    </div>
+    """
