@@ -11,75 +11,6 @@ from dotenv import load_dotenv
 from layout_header import render_header  # الهيدر الأخضر الذهبي
 
 # ==============================
-# 0) إعداد جلسة الدخول (Login Demo)
-# ==============================
-
-USERS = {
-    "admin": {"password": "admin123", "role": "admin"},
-    "demo": {"password": "demo123", "role": "demo"},
-}
-
-
-def require_login():
-    """نموذج دخول بسيط لتمييز admin / demo في الـ Live Demo."""
-    if "auth_user" not in st.session_state:
-        st.session_state.auth_user = None
-        st.session_state.auth_role = None
-
-    if st.session_state.auth_user:
-        # المستخدم مسجّل دخول بالفعل
-        return
-
-    st.markdown("## 🔐 HUMAIN Lifestyle — Live Demo Login")
-    st.write(
-        "هذا نموذج دخول تجريبي لتمييز صلاحيات العرض بين **admin** و **demo**.\n\n"
-        "- جرّب: `admin` / `admin123` لرؤية كل الشاشات بما فيها لوحات الإدارة.\n"
-        "- أو: `demo` / `demo123` لرؤية الصفحات العامة فقط."
-    )
-
-    with st.form("login_form"):
-        username = st.text_input("اسم المستخدم", value="")
-        password = st.text_input("كلمة المرور", value="", type="password")
-        submitted = st.form_submit_button("دخول")
-
-    if submitted:
-        user = USERS.get(username.strip())
-        if user and user["password"] == password:
-            st.session_state.auth_user = username.strip()
-            st.session_state.auth_role = user["role"]
-            st.experimental_rerun()
-        else:
-            st.error("بيانات الدخول غير صحيحة. جرّب admin/admin123 أو demo/demo123.")
-    st.stop()
-
-
-def require_admin():
-    """حماية صفحات الأدمن داخل الـ Demo."""
-    role = st.session_state.get("auth_role")
-    if role != "admin":
-        st.warning("هذه الصفحة متاحة فقط لحساب **admin** في وضع العرض التجريبي.")
-        return False
-    return True
-
-
-def render_footer():
-    """فوتر قانوني + حقوق ملكية فكرية يظهر أسفل كل صفحة."""
-    st.markdown("---")
-    st.markdown(
-        """
-**Legal & IP Notice (Demo Only)**  
-
-- HUMAIN Lifestyle هو نموذج عرض تجريبي، لا يمثّل منصة رسمية لأي جهة حكومية أو تجارية في المملكة.  
-- جميع الأسماء والعلامات التجارية (مثل البنوك، شركات الاتصالات، شركات الطيران، الخدمات اللوجستية، المنصات الحكومية...) مملوكة لأصحابها، وتُذكر هنا كمثال مرجعي فقط.  
-- لا يوجد أي ادعاء شراكة، تمثيل رسمي، أو اعتماد من هذه الجهات ضمن هذا النموذج.  
-- أي تكاملات مستقبلية مع منصات رسمية (مثل أبشر، توكلنا، نسك، البنوك، شركات الطيران...) يجب أن تتم وفق أنظمتها، تراخيصها، وشروط الاستخدام الخاصة بها.  
-- يمنع نسخ هذا التصميم أو إعادة استخدامه تجارياً بدون إذن كتابي من مالك الفكرة.  
-
-© 2025 HUMAIN Lifestyle — All rights reserved.
-"""
-    )
-
-# ==============================
 # 1) إعداد عام للتطبيق
 # ==============================
 
@@ -965,11 +896,8 @@ def page_home():
         )
 
     with col2:
-        role = st.session_state.get("auth_role", "-")
-        user = st.session_state.get("auth_user", "-")
         st.info(
             "ℹ️ **Demo Mode — وضع العرض التجريبي**\n\n"
-            f"- المستخدم الحالي: **{user}** (الدور: **{role}**)\n"
             "- البيانات الحالية تجريبية وليست مرتبطة بأنظمة حجز حقيقية.\n"
             "- كل الطلبات (Flights, Rail, Umrah, Investor...) تُسجَّل في النظام كـ Leads.\n"
             "- البنية جاهزة للربط مع HUMAIN ONE، ALLAM، وموفّري خدمات في السعودية لاحقاً."
@@ -1027,7 +955,6 @@ def page_home():
 - 🏙️ **Local Lifestyle & Services** → الطلب على خدمات الحياة اليومية داخل المملكة.  
 - 🩺 **Health & Insurance** → بوابة طلب التأمين والعلاج والمستشفيات.  
 - 🎓 **Education & Jobs** → بوابة التعليم وفرص العمل داخل المملكة.  
-- 📊 **Leads Dashboard (Admin)** → لوحة مؤشرات لإجمالي الطلبات حسب المصدر والحالة.  
 - 📥 **Booking Requests (Admin)** → شاشة الإدارة لمتابعة كل الـ Leads.  
 - 🏨 **Hotels & Contracts (Admin)** → إدارة الفنادق والعقود الخلفية (Back-office).  
 - 🤖 **AI Assistant** → مساعد ذكي مدمج داخل المنصّة.
@@ -1434,9 +1361,6 @@ def page_packages():
 
 
 def page_booking_requests():
-    if not require_admin():
-        return
-
     render_header()
     st.title("📥 Booking Requests (Admin) — طلبات الحجز")
 
@@ -1558,9 +1482,6 @@ def page_booking_requests():
 
 
 def page_hotels_admin():
-    if not require_admin():
-        return
-
     render_header()
     st.title("🏨 Hotels & Contracts (Admin Demo)")
 
@@ -2319,66 +2240,58 @@ def page_education_jobs():
 
 
 # ==============================
-# 7) Leads Dashboard (الجديد)
+# 7) توجيه الصفحات
 # ==============================
 
-def page_leads_dashboard():
-    if not require_admin():
-        return
-
-    render_header()
-    st.title("📊 Leads Dashboard — لوحة مؤشرات الطلبات")
-
-    df = list_booking_requests()
-    if df.empty:
-        st.info("لا توجد طلبات بعد لعرض مؤشرات.")
-        return
-
-    # تجهيز بيانات التاريخ
-    df["created_at_dt"] = pd.to_datetime(df["created_at"], errors="coerce")
-
-    total = len(df)
-    last_7 = df[df["created_at_dt"] >= (pd.Timestamp.utcnow() - pd.Timedelta(days=7))].shape[0]
-    confirmed = df[df["status"] == "Confirmed"].shape[0]
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("إجمالي الطلبات", total)
-    c2.metric("طلبات آخر 7 أيام", last_7)
-    c3.metric("طلبات مؤكدة", confirmed)
-
-    st.markdown("---")
-    st.subheader("الطلبات حسب المصدر (Source)")
-    source_counts = df["source"].fillna("N/A").value_counts().reset_index()
-    source_counts.columns = ["source", "count"]
-    st.bar_chart(source_counts.set_index("source"))
-
-    st.subheader("الطلبات حسب الحالة (Status)")
-    status_counts = df["status"].fillna("N/A").value_counts().reset_index()
-    status_counts.columns = ["status", "count"]
-    st.bar_chart(status_counts.set_index("status"))
-
-    st.markdown("---")
-    st.subheader("كل البيانات (للتصدير / التحليل)")
-    df_export = df.drop(columns=["created_at_dt"])
-    st.dataframe(df_export, use_container_width=True, hide_index=True)
-
-    csv = df_export.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(
-        "⬇️ تحميل ملف CSV للـ Leads",
-        csv,
-        "humain_leads.csv",
-        "text/csv",
-    )
-
-
-# ==============================
-# 8) توجيه الصفحات + Login + Footer
-# ==============================
-
-# أولاً: إجبار تسجيل الدخول
-require_login()
-
-# Sidebar
 st.sidebar.title("HUMAIN Lifestyle 🌍")
+page = st.sidebar.radio(
+    "اختر الصفحة",
+    [
+        "🏠 Home",
+        "🧭 Trip Planner (B2C)",
+        "🎟️ Experiences & Activities",
+        "📝 Saved Itineraries",
+        "📦 Packages / Programs",
+        "✈️ Flights to KSA",
+        "🚄 Saudi Rail",
+        "🕋 Umrah & Hajj",
+        "💼 Invest in KSA",
+        "🏙️ Local Lifestyle & Services",
+        "🩺 Health & Insurance",
+        "🎓 Education & Jobs",
+        "📥 Booking Requests (Admin)",
+        "🏨 Hotels & Contracts (Admin)",
+        "🤖 AI Assistant",
+    ],
+)
 
-with st.sidebar
+if page.startswith("🏠"):
+    page_home()
+elif page.startswith("🧭"):
+    page_trip_planner()
+elif page.startswith("🎟️"):
+    page_activities()
+elif page.startswith("📝"):
+    page_itineraries()
+elif page.startswith("📦"):
+    page_packages()
+elif page.startswith("✈️"):
+    page_flights()
+elif page.startswith("🚄"):
+    page_rail()
+elif page.startswith("🕋"):
+    page_umrah()
+elif page.startswith("💼"):
+    page_investor_gateway()
+elif page.startswith("🏙️"):
+    page_lifestyle()
+elif page.startswith("🩺"):
+    page_health_insurance()
+elif page.startswith("🎓"):
+    page_education_jobs()
+elif page.startswith("📥"):
+    page_booking_requests()
+elif page.startswith("🏨"):
+    page_hotels_admin()
+elif page.startswith("🤖"):
+    page_ai_assistant()
