@@ -1,4 +1,4 @@
-# auth_i18n.py
+# auth_i18n.py — Light Login + Language Gateway
 import os, sqlite3, hashlib, hmac, base64
 from contextlib import contextmanager
 from datetime import datetime
@@ -54,7 +54,7 @@ def _audit(action: str, user_email: Optional[str] = None, meta: str = ""):
     except Exception:
         pass
 
-# --- Hashing (ديمو آمن وبسيط): SHA-256 بدلاً من bcrypt لتفادي مشاكل باكإند على Render
+# ====== Password hashing (SHA-256 ديمو) ======
 def _hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode("utf-8")).hexdigest()
 def _verify_pw(pw: str, hashed: str) -> bool:
@@ -84,21 +84,21 @@ def touch_last_login(email: str):
         cur.execute("UPDATE users SET last_login_at=? WHERE email=?", (_now(), email.lower().strip()))
         c.commit()
 
-# --- i18n
+# ====== i18n ======
 LANGS = {"ar": "العربية", "en": "English"}
 def get_lang() -> str: return st.session_state.get("LANG", "ar")
 def set_lang(lang: str): st.session_state["LANG"] = lang if lang in LANGS else "ar"
 def t(ar: str, en: str) -> str: return ar if get_lang() == "ar" else en
 
-# --- Seed
+# ====== Seed ======
 def setup_defaults():
     ensure_auth_tables(DB_PATH_DEFAULT)
     create_user("admin@demo.local", os.getenv("ADMIN_DEMO_PW", "admin123"), role="admin")
     create_user("demo@demo.local", os.getenv("DEMO_DEMO_PW", "demo123"), role="demo")
     create_user("hamed.mukhtar@daral-sd.com", os.getenv("DEFAULT_USER_PASSWORD", "Daral@2025"), role="admin")
 
-# --- UI helpers
-def _read_logo_as_base64() -> Optional[str]:
+# ====== UI helpers ======
+def _read_logo_as_base64():
     p = Path("assets/logo.png")
     if p.exists():
         try:
@@ -108,38 +108,53 @@ def _read_logo_as_base64() -> Optional[str]:
     return None
 
 def _login_css():
+    # نسخة فاتحة (Light), خط واضح, تباين مريح
     st.markdown(
         """
 <style>
 :root{
-  --gold:#D4AF37; --green:#006C35; --bg:#0B0F0D;
-  --card:#111418; --text:#EDEDED; --muted:#9AA1A7;
+  --gold:#C8A646; --green:#0D7A45; --bg:#f7f8fb; --card:#ffffff; --text:#101418; --muted:#677181; --border:#E6E8EF;
 }
 html, body, .stApp { background: var(--bg) !important; color: var(--text) !important; }
-.humain-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
-  background: radial-gradient(1000px 500px at 10% 10%, rgba(0,108,53,.15), transparent),
-              radial-gradient(800px 400px at 90% 20%, rgba(212,175,55,.10), transparent);}
-.humain-card{ width:min(920px,94vw); background:linear-gradient(180deg, rgba(17,20,24,.95), rgba(17,20,24,.92));
-  border:1px solid rgba(212,175,55,.28); box-shadow:0 10px 40px rgba(0,0,0,.45), inset 0 0 80px rgba(212,175,55,.04);
-  border-radius:18px; padding:22px 22px 16px;}
-.h-header{ display:flex; align-items:center; gap:16px; padding:8px 4px 16px; border-bottom:1px dashed rgba(212,175,55,.3);}
-.h-logo{ height:54px; width:54px; border-radius:12px; border:1px solid var(--gold); background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center;}
-.h-title h1{ margin:0; font-size:1.55rem; color:var(--gold); font-weight:800; letter-spacing:.2px;}
-.h-title p{ margin:2px 0 0; color:var(--muted); font-size:.95rem;}
-.h-body{ display:grid; gap:18px; grid-template-columns:1.1fr .9fr; padding-top:18px;}
+* { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Kufi Arabic", "Cairo", Arial, "Apple Color Emoji", "Segoe UI Emoji" !important; }
+.humain-wrap{
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px;
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(13,122,69,.06), transparent),
+              radial-gradient(900px 500px at 90% 15%, rgba(200,166,70,.08), transparent);
+}
+.humain-card{
+  width:min(980px,94vw); background: var(--card);
+  border:1px solid var(--border);
+  box-shadow: 0 20px 50px rgba(16,20,24,.06);
+  border-radius:18px; padding:22px 22px 16px;
+}
+.h-header{ display:flex; align-items:center; gap:16px; padding:8px 4px 16px; border-bottom:1px dashed #e8e6da;}
+.h-logo{ height:58px; width:58px; border-radius:12px; border:1px solid var(--gold); background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center;}
+.h-title h1{ margin:0; font-size:1.6rem; color:#1a1f2a; font-weight:800; letter-spacing:.2px;}
+.h-title p{ margin:4px 0 0; color:var(--muted); font-size:.98rem;}
+.h-body{ display:grid; gap:18px; grid-template-columns:1.05fr .95fr; padding-top:18px;}
 .h-left{ padding-right:12px;}
-.h-legal{ border:1px solid rgba(212,175,55,.22); background:linear-gradient(180deg, rgba(212,175,55,.05), rgba(0,0,0,.0));
-  border-radius:12px; padding:14px; color:#D8D8D8; font-size:.94rem;}
-.h-legal strong{ color:var(--gold);}
-.h-divider{ height:1px; background:rgba(212,175,55,.22); margin:14px 0;}
-.h-right{ border-left:1px dashed rgba(212,175,55,.25); padding-left:14px;}
-.h-form{ border:1px solid rgba(212,175,55,.22); background:linear-gradient(180deg, rgba(0,108,53,.10), rgba(0,0,0,.10)); border-radius:12px; padding:16px;}
-.h-form h3{ margin-top:0; color:var(--gold);}
-.h-foot{ margin-top:12px; padding-top:12px; border-top:1px dashed rgba(212,175,55,.25); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#CFCFCF; font-size:.9rem;}
+.h-legal{
+  border:1px solid var(--border); background:linear-gradient(180deg, #fff, #fcfdfc);
+  border-radius:12px; padding:14px; color:#273142; font-size:.98rem;
+}
+.h-legal strong{ color:#1a1f2a; }
+.h-divider{ height:1px; background:#efe9d5; margin:14px 0;}
+.h-right{ border-left:1px dashed #e8e6da; padding-left:14px;}
+.h-form{
+  border:1px solid var(--border);
+  background:linear-gradient(180deg, #ffffff, #fbfcff);
+  border-radius:12px; padding:16px;
+}
+.h-form h3{ margin-top:0; color:#1a1f2a;}
+.h-foot{
+  margin-top:12px; padding-top:12px; border-top:1px dashed #e8e6da;
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; color:#3b4556; font-size:.92rem;
+}
 .h-company{ display:flex; gap:10px; align-items:center;}
 .h-company .mini-logo{ height:28px; width:28px; border-radius:8px; border:1px solid var(--gold); background:#fff; overflow:hidden;}
 .h-muted{ color:var(--muted);}
-@media (max-width: 860px){ .h-body{ grid-template-columns:1fr;} .h-right{ border-left:none; padding-left:0;} }
+@media (max-width: 880px){ .h-body{ grid-template-columns:1fr;} .h-right{ border-left:none; padding-left:0;} }
 </style>
         """,
         unsafe_allow_html=True
@@ -165,9 +180,11 @@ def track_page_view(page_name: str):
     _audit("page_view", st.session_state.get("AUTH_EMAIL"), page_name)
 
 def login_gate() -> bool:
+    # لو المستخدم مسجل، اسمح بمتابعة التطبيق
     if st.session_state.get("AUTH_EMAIL"):
         return True
 
+    # otherwise: اعرض صفحة البوابة (Light)
     _login_css()
     logo_b64 = _read_logo_as_base64()
 
@@ -178,7 +195,7 @@ def login_gate() -> bool:
     if logo_b64:
         st.markdown(f'<div class="h-logo"><img src="data:image/png;base64,{logo_b64}" alt="Logo" style="height:100%;width:100%;object-fit:cover;"></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="h-logo"><span style="color:#333;">Logo</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="h-logo"><span style="color:#888;">Logo</span></div>', unsafe_allow_html=True)
     st.markdown(
         """
         <div class="h-title">
