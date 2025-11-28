@@ -1,12 +1,12 @@
 import streamlit as st
 from core.app_controller import init_app, navbar
+from core.ai_engine import ai_insights
 
 init_app()
 navbar()
 
-st.title("📊 AI Reports")
+st.title("📊 AI Business Reports")
 
-prompt = st.text_area("Ask AI for insights:")
-
-if st.button("Generate Report"):
-    st.write("AI analysis will appear here...")
+query = st.text_area("Enter your business question:")
+if st.button("Generate AI Report"):
+    st.write(ai_insights(query))
