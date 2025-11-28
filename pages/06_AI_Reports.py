@@ -5,4 +5,8 @@ init_app()
 navbar()
 
 st.title("📊 AI Reports")
-st.write("AI-driven business insights & analytics dashboard.")
+
+prompt = st.text_area("Ask AI for insights:")
+
+if st.button("Generate Report"):
+    st.write("AI analysis will appear here...")
