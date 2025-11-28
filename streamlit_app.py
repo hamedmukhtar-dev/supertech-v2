@@ -1,5 +1,3 @@
-### ⬇️ PART 1 START
-
 import streamlit as st
 from pathlib import Path
 from PIL import Image
@@ -55,9 +53,6 @@ _ = lambda x: x if lang == "English" else {
     "Join Pilot Program": "انضم للنسخة التجريبية",
 }.get(x, x)
 
-### ⬆️ PART 1 END
-### ⬇️ PART 2 START
-
 # ----------------------------
 # Database Setup
 # ----------------------------
@@ -105,9 +100,6 @@ def show_pilot_signup_form():
             conn.close()
             st.success(_("Thanks for joining the pilot! We’ll contact you soon."))
 
-### ⬆️ PART 2 END
-### ⬇️ PART 3 START
-
 # ----------------------------
 # Footer Component
 # ----------------------------
@@ -149,11 +141,9 @@ locales = {
         "Thanks for joining the pilot! We’ll contact you soon.": "شكرًا لانضمامك للبرنامج التجريبي! سنتواصل معك قريبًا."
     }
 }
+
 def _(text):
     return locales[language].get(text, text)
-
-### ⬆️ PART 3 END
-### ⬇️ PART 4 START
 
 # ----------------------------
 # Main Interface
@@ -184,9 +174,6 @@ show_pilot_form()
 # Footer
 # ----------------------------
 render_footer()
-
-### ⬆️ PART 4 END
-### ⬇️ PART 5 START
 
 # ----------------------------
 # AI General Assistant (Optional - For Future Expansion)
@@ -225,13 +212,9 @@ def show_booking_requests():
 # ai_general_assistant()
 # show_booking_requests()
 
-### ⬆️ PART 5 END
-### ⬇️ PART 6 START
-
 # ----------------------------
 # Language Toggle Button (Arabic / English)
 # ----------------------------
-
 def language_switcher():
     lang = st.sidebar.radio("🌐 Select Language / اختر اللغة", ("English", "العربية"))
     st.session_state.lang = 'ar' if lang == "العربية" else 'en'
@@ -239,9 +222,7 @@ def language_switcher():
 # ----------------------------
 # App Main View Routing
 # ----------------------------
-
 def main():
-    st.set_page_config(page_title="HUMAIN Lifestyle | DAR AL KHARTOUM", layout="wide")
     language_switcher()
 
     render_header()
@@ -272,9 +253,6 @@ def main():
 
     render_footer()
 
-### ⬆️ PART 6 END
-### ⬇️ PART 7 START
-
 # ----------------------------
 # Launch App
 # ----------------------------
@@ -283,5 +261,3 @@ if __name__ == "__main__":
     if "lang" not in st.session_state:
         st.session_state.lang = "en"
     main()
-
-### ⬆️ PART 7 END
