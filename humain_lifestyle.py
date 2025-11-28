@@ -1,8 +1,5 @@
 import streamlit as st
 
-# تأكد أن set_page_config في أول الكود
-st.set_page_config(page_title="HUMAIN Lifestyle | DAR AL KHARTOUM", layout="wide")
-
 # استيراد المكتبات والملفات الأخرى
 from pathlib import Path
 from PIL import Image
