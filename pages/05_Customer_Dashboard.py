@@ -1,15 +1,24 @@
 import streamlit as st
 from core.app_controller import init_app, navbar, protect_page
-from core.ai_engine import ai_customer_profile
+from core.pipelines.user_profile_pipeline import generate_ai_profile
+from core.pipelines.behavior_tracker import track
+from core.pipelines.ai_enricher import enrich_behavior_log
 
 init_app()
 protect_page("customer")
 navbar()
 
-st.title("👤 Customer Dashboard")
+track("open_customer_dashboard")
 
-st.write("Your personalized AI insights and travel services.")
+st.title("👤 My AI Assistant")
 
-prompt = st.text_area("Ask your personal AI assistant:")
+prompt = st.text_area("Ask your personalized AI assistant:")
+
 if st.button("Ask AI"):
-    st.write(ai_customer_profile(prompt))
+    response = generate_ai_profile(prompt)
+    st.write(response)
+
+st.subheader("🔍 AI Behavior Analysis")
+if st.button("Analyze My Behavior Log"):
+    logs = st.session_state.get("behavior_log", [])
+    st.write(enrich_behavior_log(logs))
