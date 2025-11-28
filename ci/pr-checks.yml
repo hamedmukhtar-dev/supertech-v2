@@ -1,0 +1,18 @@
+name: PR Checks
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pr-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: pip install ruff
+      - name: Lint
+        run: ruff check .

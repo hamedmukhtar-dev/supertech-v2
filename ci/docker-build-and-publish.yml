@@ -1,0 +1,41 @@
+name: Docker Build and Publish
+on:
+  push:
+    branches: [ feature/phase7 ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to registry (placeholder)
+        run: |
+          echo "TODO: add registry login step with secrets"
+
+      - name: Build and push ai_service
+        run: |
+          docker build -t ${DOCKER_REGISTRY:-TODO_REGISTRY}/ai_service:feature-phase7 -f services/ai_service/Dockerfile .
+          # docker push ${DOCKER_REGISTRY:-TODO_REGISTRY}/ai_service:feature-phase7
+
+      - name: Build and push bank_service
+        run: |
+          docker build -t ${DOCKER_REGISTRY:-TODO_REGISTRY}/bank_service:feature-phase7 -f services/bank_service/Dockerfile .
+          # docker push ${DOCKER_REGISTRY:-TODO_REGISTRY}/bank_service:feature-phase7
+
+      - name: Build and push payments_service
+        run: |
+          docker build -t ${DOCKER_REGISTRY:-TODO_REGISTRY}/payments_service:feature-phase7 -f services/payments_service/Dockerfile .
+          # docker push ${DOCKER_REGISTRY:-TODO_REGISTRY}/payments_service:feature-phase7
+
+      - name: Build and push realtime_service
+        run: |
+          docker build -t ${DOCKER_REGISTRY:-TODO_REGISTRY}/realtime_service:feature-phase7 -f services/realtime_service/Dockerfile .
+          # docker push ${DOCKER_REGISTRY:-TODO_REGISTRY}/realtime_service:feature-phase7
