@@ -8,14 +8,19 @@ st.set_page_config(
 
 lang = st.session_state.get("lang", "en")
 
-# Main UI
+# Main UI Title
 st.title(t(lang, "welcome_title"))
 
-st.write("""
-Welcome to HUMAIN Lifestyle — Your gateway to travel, lifestyle, 
-and digital services. This page will be expanded with navigation 
-and dashboard features.
-""" if lang == "en" else """
-مرحباً بك في HUMAIN Lifestyle — بوابتك للسفر ونمط الحياة 
-والخدمات الرقمية. سيتم توسيع هذه الصفحة لاحقاً مع لوحات التحكم.
+# Dynamic welcome text
+if lang == "en":
+    st.write("""
+Welcome to **HUMAIN Lifestyle** — your gateway to travel, lifestyle,
+and digital services in the Kingdom of Saudi Arabia.
+This Home Page will soon include full navigation, dashboards, and AI services.
+""")
+else:
+    st.write("""
+مرحباً بك في **HUMAIN Lifestyle** — بوابتك للسفر، أسلوب الحياة،
+والخدمات الرقمية داخل المملكة العربية السعودية.
+سيتم إضافة لوحة التحكم والانتقال والخدمات الذكية قريباً.
 """)
