@@ -68,6 +68,7 @@ def _hash_pw(pw: str) -> str:
         return _bcrypt.hash(pw)
     return hashlib.sha256(pw.encode("utf-8")).hexdigest()
 
+
 def _verify_pw(pw: str, hashed: str) -> bool:
     if _bcrypt:
         try:
@@ -103,7 +104,7 @@ def get_user(email: str) -> Optional[Tuple[int, str, str, str, str, str]]:
 def touch_last_login(email: str):
     with _conn(DB_PATH_DEFAULT) as c:
         cur = c.cursor()
-        cur.execute("UPDATE users SET last_login_at=? WHERE email=?", (_now(), email.lower().strip()))
+        cur.execute("UPDATE users SET last_login_at=? WHERE email=", (_now(), email.lower().strip()))
         c.commit()
 
 # ====== Localization ======
@@ -180,7 +181,6 @@ def setup_defaults():
 
 # ====== Auth UI Wrapper ======
 def show_auth_ui() -> bool:
-    st.set_page_config(page_title="HUMAIN Lifestyle | Auth", layout="centered")
     setup_defaults()
     return login_gate()
 
