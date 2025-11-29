@@ -68,12 +68,12 @@ render_header()
 def show_pilot_form():
     st.subheader(_(f"Join Pilot Program"))
     with st.form("pilot_signup_form"):
-        full_name = st.text_input(_(f"Full Name"))
-        email = st.text_input(_(f"Email"))
-        phone = st.text_input(_(f"Phone Number"))
+        full_name = st.text_input(_(f"Full Name"), key="STREAMLIT_APP_FULL_NAME_37c217")
+        email = st.text_input(_(f"Email"), key="STREAMLIT_APP_EMAIL_d1cb3c")
+        phone = st.text_input(_(f"Phone Number"), key="STREAMLIT_APP_PHONE_NUMBER_cc9b34")
         # Explicit unique key to avoid duplicate element id with other selectboxes
         user_type = st.selectbox(_(f"User Type"), ["Traveler", "Student", "Business", "Health", "Other"], key="pilot_user_type")
-        notes = st.text_area(_(f"Notes / What do you expect?"))
+        notes = st.text_area(_(f"Notes / What do you expect?"), key="STREAMLIT_APP_NOTES_WHAT_DO_YOU_EX_72af3d")
         submitted = st.form_submit_button(_(f"Submit"))
         if submitted:
             conn = sqlite3.connect('data/app.db')
