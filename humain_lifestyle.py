@@ -26,7 +26,10 @@ WHATSAPP = "+249912399919"
 WEBSITE = "www.daral-sd.com"
 
 # اختيار اللغة
-lang = st.sidebar.selectbox("🌐 Select Language", ["English", "العربية"])
+lang_selection = st.sidebar.selectbox("🌐 Select Language", ["English", "العربية"], key="humainlifestyle_SELECT_LANGUAGE_ab7d26")
+# Normalize to canonical session_state.lang values ('ar' / 'en')
+st.session_state["lang"] = "ar" if lang_selection == "العربية" else "en"
+lang = lang_selection
 _ = lambda x: x if lang == "English" else {
     "Welcome": "مرحبًا",
     "Login": "تسجيل الدخول",

@@ -12,7 +12,7 @@ track("open_customer_dashboard")
 
 st.title("👤 My AI Assistant")
 
-prompt = st.text_area("Ask your personalized AI assistant:")
+prompt = st.text_area("Ask your personalized AI assistant:", key="customerdashboard_ASK_YOUR_385a7f")
 
 if st.button("Ask AI"):
     response = generate_ai_profile(prompt)
