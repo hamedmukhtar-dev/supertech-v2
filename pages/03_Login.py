@@ -8,8 +8,8 @@ navbar()
 lang = st.session_state.get("lang", "en")
 st.title("🔐 " + t(lang, "login"))
 
-email = st.text_input("Email")
-password = st.text_input("Password", type="password")
+email = st.text_input("Email", key="03_Login_text_input_3d6320")
+password = st.text_input("Password", type="password", key="03_Login_text_input_1438f8")
 
 if st.button(t(lang, "continue"), use_container_width=True):
     login_user(email)

@@ -7,6 +7,6 @@ navbar()
 
 st.title("📊 AI Business Reports")
 
-query = st.text_area("Enter your business question:")
+query = st.text_area("Enter your business question:", key="06_AI_Reports_text_area_479d2d")
 if st.button("Generate AI Report"):
     st.write(ai_insights(query))
