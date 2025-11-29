@@ -4,3 +4,23 @@
 # Format: <file>: widget=<widget_type> label=<label> key=<generated_key>
 #
 
+pages/02_Register.py: widget=st.text_input label="Email" key="02_REGISTER_EMAIL_50fa82"
+pages/02_Register.py: widget=st.text_input label="Country" key="02_REGISTER_COUNTRY_21804b"
+pages/02_Register.py: widget=st.text_input label="IP Address (auto-filled)" key="02_REGISTER_IP_ADDRESS_AUTOFILLED_d8f041"
+pages/03_Login.py: widget=st.text_input label="Email" key="03_LOGIN_EMAIL_07dbc3"
+pages/03_Login.py: widget=st.text_input label="Password" key="03_LOGIN_PASSWORD_a49e4d"
+pages/05_Customer_Dashboard.py: widget=st.text_area label="Ask your personalized AI assistant:" key="05_CUSTOMER_DASHBOARD_ASK_YOUR_PERSONALIZED_94112e"
+pages/06_AI_Reports.py: widget=st.text_area label="Enter your business question:" key="06_AI_REPORTS_ENTER_YOUR_BUSINESS_4ec663"
+pages/10_Financial_Core.py: widget=st.text_input label="User Email" key="10_FINANCIAL_CORE_USER_EMAIL_b8bc15"
+pages/10_Financial_Core.py: widget=st.number_input label="Amount" key="10_FINANCIAL_CORE_AMOUNT_3a0c38"
+pages/10_Financial_Core.py: widget=st.selectbox label="Type" key="10_FINANCIAL_CORE_TYPE_291c7a"
+pages/11_Payment_Hub.py: widget=st.selectbox label="Payment Method" key="11_PAYMENT_HUB_PAYMENT_METHOD_2d17cd"
+pages/11_Payment_Hub.py: widget=st.number_input label="Amount" key="11_PAYMENT_HUB_AMOUNT_73bd2a"
+pages/12_Travel_Simulation.py: widget=st.text_input label="From" key="12_TRAVEL_SIMULATION_FROM_9ac461"
+pages/12_Travel_Simulation.py: widget=st.text_input label="To" key="12_TRAVEL_SIMULATION_TO_4888c4"
+pages/13_Security_Center.py: widget=st.text_input label="Your IP" key="13_SECURITY_CENTER_YOUR_IP_dd5333"
+streamlit_app.py: widget=st.text_input label="Full Name" key="STREAMLIT_APP_FULL_NAME_37c217"
+streamlit_app.py: widget=st.text_input label="Email" key="STREAMLIT_APP_EMAIL_d1cb3c"
+streamlit_app.py: widget=st.text_input label="Phone Number" key="STREAMLIT_APP_PHONE_NUMBER_cc9b34"
+streamlit_app.py: widget=st.text_area label="Notes / What do you expect?" key="STREAMLIT_APP_NOTES_WHAT_DO_80fae0"
+
