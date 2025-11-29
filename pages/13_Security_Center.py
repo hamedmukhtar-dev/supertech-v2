@@ -7,7 +7,7 @@ navbar()
 
 st.title("🔒 Security & Identity Center")
 
-ip = st.text_input("Your IP", "102.120.44.10")
+ip = st.text_input("Your IP", "102.120.44.10", key="SECURITY_CENTER_TEXT_INPUT_5dd561")
 
 st.write("Device Fingerprint:", device_fingerprint())
 st.write("IP Risk Score:", ip_risk_score(ip))

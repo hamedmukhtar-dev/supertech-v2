@@ -7,8 +7,8 @@ navbar()
 
 st.title("💳 Payment Hub")
 
-method = st.selectbox("Payment Method", SUPPORTED_METHODS)
-amount = st.number_input("Amount", step=1.0)
+method = st.selectbox("Payment Method", SUPPORTED_METHODS, key="PAYMENT_HUB_SELECTBOX_e4b4e5")
+amount = st.number_input("Amount", step=1.0, key="PAYMENT_HUB_NUMBER_INPUT_55b8e0")
 
 if st.button("Process Payment"):
     st.write(process_payment(method, amount))

@@ -1,0 +1,40 @@
+Streamlit Widget Key Normalization Changelog
+==================================================
+
+pages/02_Register.py:
+  Line 16: widget=text_input label="Email"
+  Line 17: widget=text_input label="Country"
+  Line 18: widget=text_input label="IP Address (auto-filled)"
+
+pages/03_Login.py:
+  Line 11: widget=text_input label="Email"
+  Line 12: widget=text_input label="Password"
+
+pages/05_Customer_Dashboard.py:
+  Line 15: widget=text_area label="Ask your personalized AI assistant:"
+
+pages/06_AI_Reports.py:
+  Line 10: widget=text_area label="Enter your business question:"
+
+pages/10_Financial_Core.py:
+  Line 13: widget=selectbox label="Type"
+  Line 11: widget=text_input label="User Email"
+  Line 12: widget=number_input label="Amount"
+
+pages/11_Payment_Hub.py:
+  Line 10: widget=selectbox label="Payment Method"
+  Line 11: widget=number_input label="Amount"
+
+pages/12_Travel_Simulation.py:
+  Line 10: widget=text_input label="From"
+  Line 11: widget=text_input label="To"
+
+pages/13_Security_Center.py:
+  Line 10: widget=text_input label="Your IP"
+
+streamlit_app.py:
+  Line 71: widget=text_input label="_(f"Full Name""
+  Line 72: widget=text_input label="_(f"Email""
+  Line 73: widget=text_input label="_(f"Phone Number""
+  Line 76: widget=text_area label="_(f"Notes / What do you expect?""
+
