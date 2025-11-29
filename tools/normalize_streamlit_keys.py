@@ -37,6 +37,21 @@ def find_python_files(root: Path) -> List[Path]:
     return python_files
 
 
+def is_escaped(text: str, pos: int) -> bool:
+    """Check if a character at position is escaped by counting preceding backslashes.
+    
+    A character is escaped if preceded by an odd number of backslashes.
+    """
+    if pos == 0:
+        return False
+    backslash_count = 0
+    i = pos - 1
+    while i >= 0 and text[i] == '\\':
+        backslash_count += 1
+        i -= 1
+    return backslash_count % 2 == 1
+
+
 def find_matching_paren(text: str, start: int) -> int:
     """Find the index of the closing parenthesis matching the opening one at start.
     
@@ -53,8 +68,8 @@ def find_matching_paren(text: str, start: int) -> int:
     while i < len(text) and depth > 0:
         char = text[i]
         
-        # Handle string boundaries
-        if char in ('"', "'") and (i == 0 or text[i-1] != '\\'):
+        # Handle string boundaries (properly handle escaped quotes)
+        if char in ('"', "'") and not is_escaped(text, i):
             if not in_string:
                 in_string = True
                 string_char = char
@@ -114,7 +129,7 @@ def has_key_argument(call_content: str) -> bool:
     i = 0
     while i < len(call_content) - 3:
         char = call_content[i]
-        if char in ('"', "'") and (i == 0 or call_content[i-1] != '\\'):
+        if char in ('"', "'") and not is_escaped(call_content, i):
             if not in_string:
                 in_string = True
                 string_char = char
@@ -128,7 +143,14 @@ def has_key_argument(call_content: str) -> bool:
 
 
 def is_language_widget(label: str) -> bool:
-    """Check if a widget label indicates it's a language selector."""
+    """Check if a widget label indicates it's a language selector.
+    
+    Used to identify widgets that may need additional normalization
+    to update st.session_state['lang'] with canonical values ('ar' or 'en').
+    
+    This function is exported for use by external scripts or future extensions
+    that need to identify and handle language selector widgets specially.
+    """
     return any(pattern in label for pattern in LANGUAGE_PATTERNS)
 
 
@@ -221,9 +243,11 @@ def process_file(file_path: Path, changelog: List[str]) -> bool:
         )
         content = new_content
         
-        # Log the change
+        # Log the change (note language widgets for manual review)
         line_num = get_line_number(original_content, widget.start)
-        changelog.append(f"{file_path}:{line_num}: widget={widget.widget_type}")
+        is_lang = is_language_widget(widget.label)
+        lang_note = " [LANGUAGE_WIDGET]" if is_lang else ""
+        changelog.append(f"{file_path}:{line_num}: widget={widget.widget_type}{lang_note}")
     
     if content != original_content:
         file_path.write_text(content, encoding='utf-8')
