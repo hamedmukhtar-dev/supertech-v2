@@ -13,9 +13,9 @@ lang = st.session_state.get("lang", "en")
 
 st.title("📝 " + ("Register" if lang == "en" else "تسجيل حساب"))
 
-email = st.text_input("Email")
-country = st.text_input("Country")
-ip = st.text_input("IP Address (auto-filled)", value=st.session_state.get("ip", ""))
+email = st.text_input("Email", key="02_REGISTER_EMAIL_50fa82")
+country = st.text_input("Country", key="02_REGISTER_COUNTRY_21804b")
+ip = st.text_input("IP Address (auto-filled)", value=st.session_state.get("ip", ""), key="02_REGISTER_IP_ADDRESS_AUTO_FILL_1f9841")
 auto_lang = detect_language_from_ip()
 
 if st.button(t(lang, "continue"), use_container_width=True):
