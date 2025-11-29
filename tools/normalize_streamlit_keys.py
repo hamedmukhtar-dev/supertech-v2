@@ -32,10 +32,6 @@ WIDGET_PATTERNS = [
     'date_input',
 ]
 
-# Language-related labels that need special handling
-LANGUAGE_LABELS = ['Language', 'اللغة', '🌐']
-
-
 def find_python_files(repo_root: Path) -> list:
     """Find all Python files in the repository."""
     python_files = []
@@ -64,14 +60,6 @@ def extract_label(call_text: str) -> str:
         return match.group(1).strip()
     
     return ""
-
-
-def is_language_selector(label: str) -> bool:
-    """Check if a widget is a language selector based on its label."""
-    for lang_label in LANGUAGE_LABELS:
-        if lang_label in label:
-            return True
-    return False
 
 
 def find_widget_call_end(content: str, start_pos: int) -> int:
@@ -120,131 +108,6 @@ def find_widget_call_end(content: str, start_pos: int) -> int:
 def process_file(file_path: Path, dry_run: bool = False) -> list:
     """
     Process a single Python file, adding keys to widgets that don't have them.
-    
-    Returns a list of changes made: [(line_number, widget_type, label), ...]
-    """
-    changes = []
-    
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-    except Exception as e:
-        print(f"Warning: Could not read {file_path}: {e}")
-        return changes
-    
-    original_content = content
-    lines = content.split('\n')
-    
-    # Track widgets per component type to ensure unique keys
-    widget_counts = {}
-    
-    for widget in WIDGET_PATTERNS:
-        # Pattern to match st.widget_name( calls
-        pattern = rf'(st\.{widget}\s*\()'
-        
-        # Find all matches with their positions
-        for match in re.finditer(pattern, content):
-            start_pos = match.start()
-            call_start = match.end() - 1  # Position of opening paren
-            call_end = find_widget_call_end(content, call_start)
-            
-            call_text = content[match.start():call_end]
-            
-            # Skip if already has a key
-            if has_key_argument(call_text):
-                continue
-            
-            # Extract label
-            label = extract_label(call_text)
-            
-            # Generate unique key
-            # Track count for this widget type to ensure uniqueness
-            widget_key = (str(file_path), widget, label)
-            if widget_key not in widget_counts:
-                widget_counts[widget_key] = 0
-            widget_counts[widget_key] += 1
-            
-            # If same widget+label appears multiple times, add suffix
-            count = widget_counts[widget_key]
-            if count > 1:
-                unique_label = f"{label}_{count}"
-            else:
-                unique_label = label
-            
-            key = generate_key(file_path, widget, unique_label)
-            
-            # Calculate line number for reporting
-            line_number = content[:start_pos].count('\n') + 1
-            
-            changes.append((line_number, widget, label))
-    
-    # Now apply changes - we need to do this carefully to avoid position shifts
-    if changes and not dry_run:
-        new_content = content
-        
-        # Process in reverse order to avoid position shifts
-        for widget in WIDGET_PATTERNS:
-            pattern = rf'(st\.{widget}\s*\()([^)]*?)(\))'
-            
-            def replace_widget(m):
-                full_match = m.group(0)
-                prefix = m.group(1)
-                
-                # Find the full call including nested parens
-                start = m.start()
-                call_start = m.start() + len(prefix) - 1
-                call_end = find_widget_call_end(new_content, call_start)
-                full_call = new_content[m.start():call_end]
-                
-                if has_key_argument(full_call):
-                    return full_call
-                
-                label = extract_label(full_call)
-                
-                # Track for uniqueness
-                widget_key = (str(file_path), widget, label)
-                
-                key = generate_key(file_path, widget, label)
-                
-                # Find position to insert key= before the closing paren
-                # We need to insert before the last )
-                insert_pos = full_call.rfind(')')
-                
-                if insert_pos > 0:
-                    # Check if there's already content (need comma)
-                    before_close = full_call[:insert_pos].rstrip()
-                    if before_close.endswith(','):
-                        new_call = full_call[:insert_pos] + f'key="{key}")'
-                    elif before_close.endswith('('):
-                        new_call = full_call[:insert_pos] + f'key="{key}")'
-                    else:
-                        new_call = full_call[:insert_pos] + f', key="{key}")'
-                    
-                    # Handle language selectors - add normalization line
-                    if is_language_selector(label):
-                        # Add normalization after the widget
-                        norm_line = f'\n    st.session_state["lang"] = "ar" if {full_call[:full_call.find(")")].split("=")[-1].strip() if "=" in full_call else "selected"} == "العربية" else "en"'
-                        # This is complex - we'll handle it separately
-                        pass
-                    
-                    return new_call
-                
-                return full_call
-            
-            # Apply replacements
-            new_content = re.sub(pattern, replace_widget, new_content, flags=re.DOTALL)
-        
-        # Write back
-        if new_content != original_content:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(new_content)
-    
-    return changes
-
-
-def process_file_v2(file_path: Path, dry_run: bool = False) -> list:
-    """
-    Process a single Python file, adding keys to widgets that don't have them.
     Uses a line-by-line approach for more reliable modifications.
     
     Returns a list of changes made: [(line_number, widget_type, label), ...]
@@ -265,15 +128,15 @@ def process_file_v2(file_path: Path, dry_run: bool = False) -> list:
     used_keys = set()
     
     for widget in WIDGET_PATTERNS:
-        # Pattern to match st.widget_name( calls - handles multi-line
+        # Pattern to match st.widget_name( and st.sidebar.widget_name( calls
         # We'll process the content as a whole
         
         offset = 0
         search_start = 0
         
         while True:
-            # Find next occurrence
-            pattern = rf'st\.{widget}\s*\('
+            # Find next occurrence - matches st.widget( or st.sidebar.widget(
+            pattern = rf'st\.(?:sidebar\.)?{widget}\s*\('
             match = re.search(pattern, modified_content[search_start:])
             
             if not match:
@@ -329,15 +192,6 @@ def process_file_v2(file_path: Path, dry_run: bool = False) -> list:
                     # Adjust search position for the change in length
                     len_diff = len(new_call) - len(call_text)
                     search_start += len_diff
-                    
-                    # Handle language selectors - check if normalization is needed
-                    if is_language_selector(label):
-                        # Check if there's already a normalization line after
-                        after_widget = modified_content[abs_start + len(new_call):abs_start + len(new_call) + 200]
-                        if 'session_state' not in after_widget.split('\n')[0] and 'session_state["lang"]' not in after_widget[:100]:
-                            # We would add normalization, but this is complex
-                            # For now, just note it in the changelog
-                            pass
     
     # Write back if changes were made
     if modified_content != original_content and not dry_run:
@@ -398,7 +252,7 @@ def main():
     
     for file_path in python_files:
         relative_path = file_path.relative_to(repo_root)
-        changes = process_file_v2(file_path, dry_run=args.dry_run)
+        changes = process_file(file_path, dry_run=args.dry_run)
         
         if changes:
             all_changes[str(relative_path)] = changes

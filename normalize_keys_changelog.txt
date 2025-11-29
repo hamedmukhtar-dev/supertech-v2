@@ -1,6 +1,10 @@
 Streamlit Widget Key Normalization Changelog
 ==================================================
 
+humain_lifestyle.py:
+  Line 29: widget=selectbox label="🌐 Select Language"
+  + Added st.session_state["lang"] normalization for language selector
+
 pages/02_Register.py:
   Line 16: widget=text_input label="Email"
   Line 17: widget=text_input label="Country"
@@ -17,9 +21,9 @@ pages/06_AI_Reports.py:
   Line 10: widget=text_area label="Enter your business question:"
 
 pages/10_Financial_Core.py:
-  Line 13: widget=selectbox label="Type"
   Line 11: widget=text_input label="User Email"
   Line 12: widget=number_input label="Amount"
+  Line 13: widget=selectbox label="Type"
 
 pages/11_Payment_Hub.py:
   Line 10: widget=selectbox label="Payment Method"
@@ -33,8 +37,7 @@ pages/13_Security_Center.py:
   Line 10: widget=text_input label="Your IP"
 
 streamlit_app.py:
-  Line 71: widget=text_input label="_(f"Full Name""
-  Line 72: widget=text_input label="_(f"Email""
-  Line 73: widget=text_input label="_(f"Phone Number""
-  Line 76: widget=text_area label="_(f"Notes / What do you expect?""
-
+  Line 71: widget=text_input label="Full Name"
+  Line 72: widget=text_input label="Email"
+  Line 73: widget=text_input label="Phone Number"
+  Line 76: widget=text_area label="Notes / What do you expect?"
