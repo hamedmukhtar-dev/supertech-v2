@@ -166,7 +166,13 @@ def process_file(filepath: Path, dry_run: bool = False) -> list:
 
     try:
         content = filepath.read_text(encoding="utf-8")
-    except Exception as e:
+    except FileNotFoundError:
+        print(f"File not found: {filepath}")
+        return changes
+    except UnicodeDecodeError as e:
+        print(f"Encoding error reading {filepath}: {e}")
+        return changes
+    except OSError as e:
         print(f"Error reading {filepath}: {e}")
         return changes
 

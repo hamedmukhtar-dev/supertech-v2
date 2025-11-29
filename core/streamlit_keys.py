@@ -64,6 +64,7 @@ def generate_key(path: Path, component: str, label: str = "") -> str:
         Deterministic key string
     """
     page = normalize_page(path)
-    hash_input = f"{path}:{component}:{label}"
+    # Use posix path for consistent hashes across platforms
+    hash_input = f"{path.as_posix()}:{component}:{label}"
     hash_val = short_hash(hash_input)
     return f"{page}_{component}_{hash_val}"
