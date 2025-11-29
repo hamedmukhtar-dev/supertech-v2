@@ -85,7 +85,11 @@ def find_widget_calls(content: str):
 
 
 def extract_label(call_content: str) -> str:
-    """Extract the first string argument (label) from a widget call."""
+    """Extract the first string argument (label) from a widget call.
+    
+    Note: This handles simple cases. Complex escaped quotes may not be
+    extracted correctly, but the hash ensures unique keys regardless.
+    """
     # Match the first string argument after the opening paren
     # Handle both direct strings and function-wrapped strings like _(f"Label")
     
@@ -103,8 +107,12 @@ def extract_label(call_content: str) -> str:
 
 
 def component_from_label(label: str) -> str:
-    """Convert a label to a component identifier."""
-    # Clean up the label for use as component name
+    """Convert a label to a component identifier.
+    
+    Uses the first two alphanumeric words from the label.
+    The hash suffix ensures uniqueness even if labels produce similar components.
+    """
+    # Clean up the label for use as component name (keep alphanumeric and spaces)
     clean = re.sub(r'[^\w\s]', '', label)
     words = clean.upper().split()
     if words:

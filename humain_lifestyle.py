@@ -27,8 +27,9 @@ WEBSITE = "www.daral-sd.com"
 
 # اختيار اللغة
 lang_selection = st.sidebar.selectbox("🌐 Select Language", ["English", "العربية"], key="humainlifestyle_SELECT_LANGUAGE_ab7d26")
-# Normalize to canonical session_state.lang values ('ar' / 'en')
+# Normalize to canonical session_state.lang values ('ar' / 'en') for use elsewhere
 st.session_state["lang"] = "ar" if lang_selection == "العربية" else "en"
+# Keep lang as selection value for the translation lambda below
 lang = lang_selection
 _ = lambda x: x if lang == "English" else {
     "Welcome": "مرحبًا",
