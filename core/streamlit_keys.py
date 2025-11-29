@@ -33,13 +33,18 @@ def short_hash(text: str) -> str:
     """
     Generate a short hash (first 6 hex chars) from the given text using MD5.
     
+    Note: MD5 is used here intentionally for its speed and determinism.
+    This is NOT used for cryptographic purposes - only for generating stable,
+    short identifiers to differentiate similar widget keys. Collision risk
+    is acceptable as keys are prefixed with unique page/component names.
+    
     Args:
         text: Input text to hash
         
     Returns:
         First 6 hexadecimal characters of the MD5 hash
     """
-    return hashlib.md5(text.encode('utf-8')).hexdigest()[:6]
+    return hashlib.md5(text.encode('utf-8')).hexdigest()[:6]  # noqa: S324
 
 
 def generate_key(path: Path, component: str, label: str = "") -> str:

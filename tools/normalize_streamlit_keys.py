@@ -198,11 +198,6 @@ def inject_key(call_text: str, key: str) -> str:
     return new_call
 
 
-def is_language_selector(label: str) -> bool:
-    """Check if label indicates a language selector."""
-    return any(kw in label.lower() for kw in ['language', 'اللغة', '🌐'])
-
-
 def process_file(file_path: Path, dry_run: bool = False) -> list[dict]:
     """
     Process a single Python file and inject keys where needed.
