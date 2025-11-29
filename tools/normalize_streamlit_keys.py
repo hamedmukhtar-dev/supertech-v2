@@ -6,7 +6,6 @@ Scans repository Python files for Streamlit widget calls and injects
 deterministic keys for widgets that don't have one. Also normalizes
 language selector values to 'ar' or 'en'.
 """
-import ast
 import os
 import re
 import sys

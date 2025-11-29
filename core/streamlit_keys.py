@@ -34,6 +34,10 @@ def short_hash(text: str) -> str:
     """
     Return first 6 hex characters of md5 hash.
     
+    Note: MD5 is used here for deterministic identifier generation,
+    not for cryptographic security purposes. This is acceptable as
+    the hash is used only for creating unique widget keys.
+    
     Args:
         text: Input text to hash
         
