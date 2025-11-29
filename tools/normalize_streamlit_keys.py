@@ -137,7 +137,7 @@ def has_key_argument(call_text: str) -> bool:
     while i < len(call_text):
         char = call_text[i]
         if in_string:
-            if char == '\\':
+            if char == '\\' and i + 1 < len(call_text):
                 i += 2
                 continue
             if char == in_string:
@@ -223,6 +223,14 @@ def add_lang_normalization(content: str, line_num: int, call_text: str) -> str:
     """
     Add language normalization lines after a language selector.
     Ensures the code normalizes/writes to st.session_state['lang'] with values 'ar' or 'en'.
+    
+    This function is called when processing language selector widgets (those with labels
+    containing 'Language', 'اللغة', or '🌐'). It adds a normalization line after the
+    widget call to ensure consistent lang values in session state.
+    
+    Note: In the current codebase, most language selectors already have normalization
+    logic nearby, so this function typically returns the content unchanged. It's kept
+    for handling edge cases where language selectors lack normalization.
     """
     lines = content.split('\n')
     

@@ -11,7 +11,13 @@ def normalize_page(path: Path) -> str:
 
 
 def short_hash(text: str) -> str:
-    """Return first 6 chars of md5 hash of the text."""
+    """
+    Return first 6 chars of md5 hash of the text.
+    
+    Note: MD5 is used here for generating short, deterministic identifiers,
+    not for security purposes. The hash is only used to create unique widget
+    keys and collision resistance is not critical for this use case.
+    """
     return hashlib.md5(text.encode('utf-8')).hexdigest()[:6]
 
 
