@@ -7,8 +7,8 @@ navbar()
 
 st.title("✈️ Travel Simulation")
 
-frm = st.text_input("From", "KRT")
-to = st.text_input("To", "DXB")
+frm = st.text_input("From", "KRT", key="12_TRAVEL_SIMULATION_FROM_9ac461")
+to = st.text_input("To", "DXB", key="12_TRAVEL_SIMULATION_TO_4888c4")
 
 if st.button("Search Flights"):
     offers = generate_flight_offers({"from": frm, "to": to})
