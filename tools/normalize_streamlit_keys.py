@@ -9,7 +9,7 @@ import ast
 import os
 import re
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 # Add parent directory to path for importing core modules
 import sys
@@ -71,13 +71,20 @@ def extract_first_string_arg(call_text: str) -> Optional[str]:
     Returns:
         The first string argument, or None if not found.
     """
-    # Match quoted strings (single or double quotes, including f-strings)
+    # Match quoted strings (single or double quotes)
+    # Patterns cover: regular strings, f-strings, wrapped with _(), wrapped with t()
     patterns = [
-        r'st\.\w+\s*\(\s*f?"([^"]*)"',
-        r"st\.\w+\s*\(\s*f?'([^']*)'",
-        r'st\.\w+\s*\(\s*_\(\s*f?"([^"]*)"\s*\)',
-        r"st\.\w+\s*\(\s*_\(\s*f?'([^']*)'\s*\)",
+        # Regular and f-strings with double quotes
+        r'st\.\w+\s*\(\s*(?:f)?"([^"]*)"',
+        # Regular and f-strings with single quotes
+        r"st\.\w+\s*\(\s*(?:f)?'([^']*)'",
+        # Wrapped with _() translation function - double quotes
+        r'st\.\w+\s*\(\s*_\(\s*(?:f)?"([^"]*)"\s*\)',
+        # Wrapped with _() translation function - single quotes
+        r"st\.\w+\s*\(\s*_\(\s*(?:f)?'([^']*)'\s*\)",
+        # Wrapped with t(lang, ...) translation function - double quotes
         r'st\.\w+\s*\(\s*t\(\s*lang\s*,\s*"([^"]*)"\s*\)',
+        # Wrapped with t(lang, ...) translation function - single quotes
         r"st\.\w+\s*\(\s*t\(\s*lang\s*,\s*'([^']*)'\s*\)",
     ]
     for pattern in patterns:
@@ -114,7 +121,7 @@ def has_key_argument(call_text: str) -> bool:
     return bool(re.search(r'\bkey\s*=', call_text))
 
 
-def get_multiline_call(lines: list[str], start_idx: int) -> tuple[str, int]:
+def get_multiline_call(lines: List[str], start_idx: int) -> tuple:
     """Get the full widget call which may span multiple lines.
 
     Args:
@@ -188,7 +195,7 @@ def add_lang_normalization(line: str, label: str) -> str:
     return line
 
 
-def process_file(filepath: Path, changelog: list[str]) -> bool:
+def process_file(filepath: Path, changelog: List[str]) -> bool:
     """Process a single Python file for Streamlit widgets.
 
     Args:
@@ -220,6 +227,8 @@ def process_file(filepath: Path, changelog: list[str]) -> bool:
 
                 # Skip if already has key
                 if has_key_argument(full_call):
+                    # Skip past multiline call
+                    i = end_idx
                     break
 
                 # Extract label
@@ -229,13 +238,20 @@ def process_file(filepath: Path, changelog: list[str]) -> bool:
                 component = normalize_component(label, widget)
                 key = generate_key(filepath, component, label)
 
-                # Inject key into the line
-                lines[i] = inject_key(lines[i], key)
+                # Inject key - for multiline calls, inject on the line with closing paren
+                if end_idx > i:
+                    # Multiline: inject on the last line
+                    lines[end_idx] = inject_key(lines[end_idx], key)
+                else:
+                    # Single line: inject on current line
+                    lines[i] = inject_key(lines[i], key)
                 modified = True
 
                 # Log the change
                 changelog.append(f"{filepath}:{i + 1}: widget={widget}")
 
+                # Skip past multiline call
+                i = end_idx
                 break  # Only process one widget per line
 
         i += 1
@@ -247,7 +263,7 @@ def process_file(filepath: Path, changelog: list[str]) -> bool:
     return modified
 
 
-def scan_directory(root: Path) -> list[str]:
+def scan_directory(root: Path) -> List[str]:
     """Scan directory for Python files and process them.
 
     Args:
