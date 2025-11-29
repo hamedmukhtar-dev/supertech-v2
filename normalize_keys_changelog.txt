@@ -5,7 +5,7 @@ This file documents all widget keys that were injected to prevent
 StreamlitDuplicateElementId errors. Keys follow the format:
 {PAGE}_{COMPONENT}_{HASH}
 
-where HASH is the first 6 chars of md5("{repo_path}:{component}:{label}")
+where HASH is the first 6 chars of md5("{filepath}:{component}:{label}")
 
 ## layout_header.py (pre-existing key)
 - st.selectbox: label='🌐' -> key='lang_selector_header' (already present)

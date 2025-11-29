@@ -83,27 +83,42 @@ def find_closing_paren(content: str, start: int) -> int:
     depth = 0
     in_string = None
     escape_next = False
+    i = start
 
-    for i, char in enumerate(content[start:], start):
+    while i < len(content):
+        char = content[i]
+
         if escape_next:
             escape_next = False
+            i += 1
             continue
 
         if char == '\\':
             escape_next = True
+            i += 1
             continue
 
         if in_string:
-            if char == in_string:
+            # Check for end of triple-quote string
+            if len(in_string) == 3:
+                if content[i:i+3] == in_string:
+                    in_string = None
+                    i += 3
+                    continue
+            elif char == in_string:
                 in_string = None
+            i += 1
             continue
 
         if char in ('"', "'"):
             # Check for triple quotes
             if content[i:i+3] in ('"""', "'''"):
                 in_string = content[i:i+3]
+                i += 3
+                continue
             else:
                 in_string = char
+            i += 1
             continue
 
         if char == '(':
@@ -112,6 +127,8 @@ def find_closing_paren(content: str, start: int) -> int:
             depth -= 1
             if depth == 0:
                 return i
+
+        i += 1
 
     return -1
 
@@ -226,7 +243,7 @@ def scan_repository(repo_root: Path, dry_run: bool = False) -> dict:
     return all_changes
 
 
-def generate_changelog(changes: dict, output_path: Path):
+def generate_changelog(changes: dict, output_path: Path, repo_root: Path):
     """Generate a changelog file documenting all injected keys."""
     lines = [
         "# Streamlit Keys Normalization Changelog",
@@ -237,7 +254,7 @@ def generate_changelog(changes: dict, output_path: Path):
     ]
 
     for filepath, file_changes in sorted(changes.items()):
-        rel_path = filepath.relative_to(filepath.parent.parent)
+        rel_path = filepath.relative_to(repo_root)
         lines.append(f"## {rel_path}")
         lines.append("")
         for widget_type, label, key in file_changes:
@@ -245,6 +262,17 @@ def generate_changelog(changes: dict, output_path: Path):
         lines.append("")
 
     output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def find_repo_root(start_path: Path) -> Path:
+    """Find the repository root by looking for .git directory."""
+    current = start_path.resolve()
+    while current != current.parent:
+        if (current / ".git").exists():
+            return current
+        current = current.parent
+    # Fallback to parent of tools directory
+    return start_path.parent
 
 
 def main():
@@ -265,7 +293,7 @@ def main():
     args = parser.parse_args()
 
     # Determine repository root
-    repo_root = Path(__file__).parent.parent
+    repo_root = find_repo_root(Path(__file__).parent)
 
     print(f"Scanning repository: {repo_root}")
     if args.dry_run:
@@ -287,7 +315,7 @@ def main():
 
     if not args.dry_run:
         changelog_path = repo_root / args.changelog
-        generate_changelog(changes, changelog_path)
+        generate_changelog(changes, changelog_path, repo_root)
         print(f"\nChangelog written to: {changelog_path}")
 
 
