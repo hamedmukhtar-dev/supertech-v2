@@ -18,5 +18,5 @@ st.table(users)
 
 st.subheader("🧠 System Behavior Intelligence")
 logs = st.session_state.get("behavior_log", [])
-if st.button("Run AI Behavior Analysis"):
+if st.button("Run AI Behavior Analysis", key="04_Staff_Dashboard_button_92c63e"):
     st.write(enrich_behavior_log(logs))

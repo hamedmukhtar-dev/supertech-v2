@@ -12,13 +12,13 @@ track("open_customer_dashboard")
 
 st.title("👤 My AI Assistant")
 
-prompt = st.text_area("Ask your personalized AI assistant:")
+prompt = st.text_area("Ask your personalized AI assistant:", key="05_Customer_Dashboard_text_area_53a8a5")
 
-if st.button("Ask AI"):
+if st.button("Ask AI", key="05_Customer_Dashboard_button_eb2c49"):
     response = generate_ai_profile(prompt)
     st.write(response)
 
 st.subheader("🔍 AI Behavior Analysis")
-if st.button("Analyze My Behavior Log"):
+if st.button("Analyze My Behavior Log", key="05_Customer_Dashboard_button_887598"):
     logs = st.session_state.get("behavior_log", [])
     st.write(enrich_behavior_log(logs))

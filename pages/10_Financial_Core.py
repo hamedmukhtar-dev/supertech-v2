@@ -8,11 +8,11 @@ init_ledger()
 
 st.title("💰 HUMAIN Financial Core")
 
-user = st.text_input("User Email")
-amount = st.number_input("Amount", step=1.0)
-type = st.selectbox("Type", ["credit", "debit"])
+user = st.text_input("User Email", key="10_Financial_Core_text_input_04da6f")
+amount = st.number_input("Amount", step=1.0, key="10_Financial_Core_number_input_3d209f")
+type = st.selectbox("Type", ["credit", "debit"], key="10_Financial_Core_selectbox_28912f")
 
-if st.button("Submit Transaction"):
+if st.button("Submit Transaction", key="10_Financial_Core_button_616008"):
     add_transaction(user, amount, type)
     st.success("Transaction added!")
 

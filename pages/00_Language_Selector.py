@@ -37,11 +37,11 @@ st.markdown(
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("🇸🇦 العربية", use_container_width=True):
+    if st.button("🇸🇦 العربية", use_container_width=True, key="00_Language_Selector_button_c536c5"):
         st.session_state.lang = "ar"
         st.switch_page("01_Home.py")
 
 with col2:
-    if st.button("🇬🇧 English", use_container_width=True):
+    if st.button("🇬🇧 English", use_container_width=True, key="00_Language_Selector_button_a2ec91"):
         st.session_state.lang = "en"
         st.switch_page("01_Home.py")
