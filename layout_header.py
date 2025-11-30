@@ -31,7 +31,7 @@ def render_header(lang="ar"):
     # زر اختيار اللغة (unique key to avoid duplicate element id)
     col1, col2 = st.columns([6, 1])
     with col2:
-        # Use a unique key so Streamlit will not auto-generate conflicting element ids
-        selected = st.selectbox("🌐", ["العربية", "English"], index=0, key="lang_selector_header")
-        # Normalize to canonical session_state.lang values ('ar' / 'en') used elsewhere
-        st.session_state.lang = "ar" if selected == "العربية" else "en"
+        # Make the selectbox have a stable explicit key and normalize stored language
+        lang_sel = st.selectbox("🌐", ["العربية", "English"], index=0, key="LAYOUT_HEADER_LANG")
+        # Canonicalize to 'ar' or 'en' (preserve the st.session_state['lang'] key)
+        st.session_state['lang'] = 'ar' if lang_sel in ('العربية', 'ar') else 'en'

@@ -1,4 +1,8 @@
 import streamlit as st
+
+# Ensure page config is set once at top-level before any Streamlit UI calls
+st.set_page_config(page_title="HUMAIN Lifestyle", layout="wide")
+
 import sqlite3
 from layout_footer import render_footer
 from layout_header import render_header
