@@ -1,7 +1,6 @@
 import streamlit as st
 from core.app_controller import init_app, navbar
 from database.users import get_user_by_email
-from utils.i18n import t
 
 init_app()
 navbar()
@@ -15,14 +14,14 @@ if st.button("Login", use_container_width=True):
     user = get_user_by_email(email)
 
     if not user:
-        st.error("User not found.")
+        st.error("❌ User not found.")
     else:
-        role = user[2]
-        st.session_state.logged_in = True
-        st.session_state.email = email
-        st.session_state.role = role
+        st.session_state["logged_in"] = True
+        st.session_state["email"] = email
+        st.session_state["role"] = user[2]  # "staff" or "customer"
 
-        if role == "staff":
+        # 🔥 توجيه حسب نوع الحساب
+        if user[2] == "staff":
             st.success("Welcome Staff! Redirecting…")
             st.switch_page("pages/04_Staff_Dashboard.py")
         else:
