@@ -7,4 +7,4 @@ navbar()
 
 st.title("👤 Customer Dashboard")
 
-st.success("Welcome to HUMAIN Lifestyle! Enjoy your smart experience 🌍✨")
+st.success("🎉 Welcome to HUMAIN Lifestyle!")
