@@ -1,22 +1,22 @@
 import streamlit as st
 from core.app_controller import init_app, navbar, protect_page
 from database.users import get_all_users
-from core.pipelines.behavior_tracker import track
-from core.pipelines.ai_enricher import enrich_behavior_log
+from utils.i18n import t
 
+# 🧑‍💼 Staff فقط
 init_app()
 protect_page("staff")
 navbar()
 
-track("open_staff_dashboard")
+st.title("🧑‍💼 Staff Dashboard — Operations Center")
 
-st.title("🧑‍💼 Staff Dashboard – Smart CRM + AI")
+email = st.session_state.get("email", "")
+st.success(f"Welcome Admin: {email}")
 
-users = get_all_users()
-st.subheader("👥 Registered Users (CRM)")
-st.table(users)
+st.subheader("📊 Registered Users")
+rows = get_all_users()
 
-st.subheader("🧠 System Behavior Intelligence")
-logs = st.session_state.get("behavior_log", [])
-if st.button("Run AI Behavior Analysis"):
-    st.write(enrich_behavior_log(logs))
+if not rows:
+    st.info("No registered users yet.")
+else:
+    st.dataframe(rows, use_container_width=True)
