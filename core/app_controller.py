@@ -9,8 +9,7 @@ def init_app():
         st.session_state.role = None
     if "email" not in st.session_state:
         st.session_state.email = None
-
-    st.set_page_config(page_title="HUMAIN Lifestyle", layout="wide")
+    # st.set_page_config removed - only called in the launcher (streamlit_app.py)
 
 def protect_page(required_role=None):
     if not st.session_state.get("logged_in"):
