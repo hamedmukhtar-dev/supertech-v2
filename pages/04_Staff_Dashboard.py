@@ -6,15 +6,11 @@ init_app()
 protect_page("staff")
 navbar()
 
-st.title("🧑‍💼 Staff Dashboard — Operations Center")
+st.title("🧑‍💼 Staff Dashboard – CRM")
 
-email = st.session_state.get("email", "")
-st.success(f"Welcome Admin: {email}")
-
-st.subheader("📊 Registered Users")
-rows = get_all_users()
-
-if not rows:
+users = get_all_users()
+if not users:
     st.info("No registered users yet.")
 else:
-    st.dataframe(rows, use_container_width=True)
+    st.subheader("👥 Registered Users")
+    st.table(users)
