@@ -6,8 +6,6 @@ from utils.i18n import t
 init_app()
 navbar()
 
-lang = st.session_state.get("lang", "en")
-
 st.title("🔐 Login")
 
 email = st.text_input("Email", key="login_email")
@@ -19,11 +17,12 @@ if st.button("Login", use_container_width=True):
     if not user:
         st.error("User not found.")
     else:
-        st.session_state["logged_in"] = True
-        st.session_state["email"] = email
-        st.session_state["role"] = user[2]  # "staff" or "customer"
+        role = user[2]
+        st.session_state.logged_in = True
+        st.session_state.email = email
+        st.session_state.role = role
 
-        if user[2] == "staff":
+        if role == "staff":
             st.success("Welcome Staff! Redirecting…")
             st.switch_page("pages/04_Staff_Dashboard.py")
         else:
