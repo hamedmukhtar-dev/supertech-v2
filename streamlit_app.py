@@ -1,4 +1,8 @@
 import streamlit as st
+
+# Ensure page config is set once at top-level before any Streamlit UI calls
+st.set_page_config(page_title="HUMAIN Lifestyle", layout="wide")
+
 import sqlite3
 from layout_footer import render_footer
 from layout_header import render_header
@@ -87,4 +91,6 @@ def show_pilot_form():
             st.success(_("Thanks for joining the pilot! We’ll contact you soon."))
 
 # Example usage on the main page
-show_pilot_form()
+# Replace legacy show_home() with the implemented Home UI entrypoint
+from humain_lifestyle import main as home_page
+home_page()
