@@ -10,8 +10,6 @@ def init_app():
     if "email" not in st.session_state:
         st.session_state.email = None
 
-    st.set_page_config(page_title="HUMAIN Lifestyle", layout="wide")
-
 def protect_page(required_role=None):
     if not st.session_state.get("logged_in"):
         st.error("🚫 Please login first.")
